@@ -1,14 +1,13 @@
 # backend/common/database.py
 """
 StudySprint 4.0 - Database Configuration
-Final fixed version with correct field names
+Fixed for Stage 3 with correct imports
 """
 
-from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey, DECIMAL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy import DECIMAL  # Import DECIMAL from main sqlalchemy module
 from sqlalchemy.sql import func
 import uuid
 from datetime import datetime
@@ -30,10 +29,6 @@ def get_db():
     finally:
         db.close()
 
-# =============================================================================
-# BASIC MODELS FOR STAGE 2
-# =============================================================================
-
 class Topic(Base):
     __tablename__ = "topics"
     
@@ -51,17 +46,15 @@ class Topic(Base):
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def __repr__(self):
         return f"<Topic(id={self.id}, name='{self.name}', pdfs={self.total_pdfs})>"
 
     @property
     def completion_percentage(self):
-        """Calculate completion percentage based on study progress"""
         return float(self.study_progress)
 
     def update_progress(self, completed_pdfs: int, total_pdfs: int):
-        """Update study progress based on completed PDFs"""
         self.total_pdfs = total_pdfs
         if total_pdfs > 0:
             self.study_progress = (completed_pdfs / total_pdfs) * 100
@@ -83,7 +76,7 @@ class PDF(Base):
     current_page = Column(Integer, default=1)
     last_read_page = Column(Integer, default=1)
     reading_progress = Column(DECIMAL(5,2), default=0.0)
-    pdf_type = Column(String(20), default='study')  # study, exercise, reference
+    pdf_type = Column(String(20), default='study')
     parent_pdf_id = Column(UUID(as_uuid=True), ForeignKey("pdfs.id"))
     difficulty_level = Column(Integer, default=1)
     estimated_read_time_minutes = Column(Integer, default=0)
@@ -98,14 +91,11 @@ class PDF(Base):
     author = Column(String(255))
     subject = Column(String(255))
     keywords = Column(ARRAY(String))
-    # Changed 'metadata' to 'file_metadata' to avoid SQLAlchemy conflict
     file_metadata = Column(JSON, default={})
     ai_analysis = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    topic = relationship("Topic")
     parent_pdf = relationship("PDF", remote_side=[id])
 
     def __repr__(self):
@@ -122,7 +112,6 @@ class PDF(Base):
         return round((self.current_page / self.total_pages) * 100, 2)
 
     def update_reading_progress(self, current_page: int):
-        """Update reading progress based on current page"""
         self.current_page = current_page
         self.last_read_page = max(self.last_read_page, current_page)
         if self.total_pages > 0:

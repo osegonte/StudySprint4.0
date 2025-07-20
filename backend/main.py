@@ -1,7 +1,7 @@
 # backend/main.py
 """
 StudySprint 4.0 - FastAPI Application Entry Point
-Simplified version for Stage 2 implementation
+Stage 2+ with placeholder for Stage 3
 """
 
 from fastapi import FastAPI, HTTPException
@@ -15,6 +15,7 @@ import logging
 # Import implemented modules
 from modules.topics.routes import router as topics_router
 from modules.pdfs.routes import router as pdfs_router
+from modules.sessions.routes import router as sessions_router  # Placeholder
 
 from common.database import engine, Base
 
@@ -57,7 +58,6 @@ async def startup_event():
 upload_dir = "uploads"
 if not os.path.exists(upload_dir):
     os.makedirs(upload_dir)
-    # Create subdirectories
     for subdir in ["pdfs", "thumbnails", "temp"]:
         os.makedirs(os.path.join(upload_dir, subdir), exist_ok=True)
 
@@ -71,17 +71,19 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "timestamp": datetime.utcnow().isoformat(),
-        "stage": "Stage 2: PDF Management & Viewer Implementation 🚀"
+        "stage": "Stage 2+ Ready for Stage 3: Session Tracking 🚀"
     }
+
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint with service status"""
     try:
-        # Test database connection
+        # Test database connection with proper SQLAlchemy syntax
         from common.database import SessionLocal
+        from sqlalchemy import text
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))  # Fix: Wrap in text()
         db.close()
         db_status = "online"
     except Exception as e:
@@ -103,17 +105,16 @@ async def health_check():
 # API version prefix
 api_v1 = "/api/v1"
 
-# Module routes - Implemented modules
+# Module routes
 app.include_router(topics_router, prefix=f"{api_v1}/topics", tags=["topics"])
 app.include_router(pdfs_router, prefix=f"{api_v1}/pdfs", tags=["pdfs"])
+app.include_router(sessions_router, prefix=f"{api_v1}/sessions", tags=["sessions"])
 
-# Development endpoints for Stage tracking
 @app.get(f"{api_v1}/status")
 async def get_development_status():
-    """Development status endpoint showing implementation progress."""
     return {
         "project": "StudySprint 4.0",
-        "current_stage": "Stage 2: PDF Management & Viewer Implementation",
+        "current_stage": "Stage 2+ Ready for Stage 3",
         "completed": [
             "✅ Modular project structure",
             "✅ Environment configuration", 
@@ -121,47 +122,35 @@ async def get_development_status():
             "✅ Topics module (CRUD operations)",
             "✅ PDF module (upload, processing, management)",
             "✅ Backend foundation with FastAPI",
-            "✅ File upload and basic processing"
+            "✅ File upload and basic processing",
+            "✅ Fixed SQLAlchemy imports"
         ],
-        "in_progress": [
-            "🔄 PDF viewer frontend implementation",
-            "🔄 PDF management interface",
-            "🔄 Frontend-backend integration"
-        ],
-        "next": [
-            "📱 React PDF viewer with PDF.js",
-            "🎨 PDF management UI components",
-            "📚 Stage 3: Topics Organization (Week 3)"
+        "ready_for": [
+            "🚀 Stage 3: Study session tracking",
+            "🍅 Pomodoro timer integration",
+            "📖 Page-level time tracking",
+            "📊 Advanced analytics"
         ],
         "modules": {
             "topics": "✅ completed",
-            "pdfs": "✅ completed (backend)",
-            "exercises": "pending",
-            "sessions": "pending",
-            "notes": "pending",
-            "highlights": "pending",
-            "analytics": "pending",
-            "goals": "pending",
-            "achievements": "pending",
-            "ai_assistant": "pending"
+            "pdfs": "✅ completed",
+            "sessions": "🔧 placeholder ready for implementation"
         },
         "api_endpoints": {
             "topics": "8 endpoints implemented",
             "pdfs": "8 endpoints implemented",
-            "total_implemented": 16,
-            "documentation": "/docs"
+            "sessions": "1 placeholder endpoint",
+            "total_implemented": "17"
         }
     }
 
 @app.get(f"{api_v1}/stats")
 async def get_system_stats():
-    """Get system statistics and metrics"""
     try:
         from common.database import SessionLocal, Topic, PDF
         
         db = SessionLocal()
         
-        # Get basic counts
         total_topics = db.query(Topic).count()
         active_topics = db.query(Topic).filter(Topic.is_archived == False).count()
         archived_topics = db.query(Topic).filter(Topic.is_archived == True).count()
@@ -186,7 +175,8 @@ async def get_system_stats():
             "system": {
                 "upload_directory": upload_dir,
                 "environment": "development",
-                "debug_mode": True
+                "database_status": "connected",
+                "stage": "Ready for Stage 3"
             }
         }
         
@@ -195,7 +185,7 @@ async def get_system_stats():
         return {
             "topics": {"total": 0, "active": 0, "archived": 0},
             "pdfs": {"total": 0, "completed": 0, "in_progress": 0, "completion_rate": 0},
-            "system": {"upload_directory": upload_dir, "environment": "development"}
+            "system": {"upload_directory": upload_dir, "environment": "development", "error": str(e)}
         }
 
 # Error handlers

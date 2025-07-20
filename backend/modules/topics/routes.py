@@ -1,7 +1,7 @@
-# backend/modules/topics/routes.py
+# backend/modules/topics/routes.py (Enhanced)
 """
-StudySprint 4.0 - Topics API Routes
-FastAPI routes for topic management
+StudySprint 4.0 - Enhanced Topics API Routes
+Stage 3: Advanced topic management with analytics
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -27,16 +27,22 @@ async def create_topic(
     topic_service: TopicService = Depends(get_topic_service)
 ):
     """
-    Create a new topic
+    Create a new topic with enhanced validation
     
-    - **name**: Topic name (required)
+    - **name**: Topic name (required, must be unique)
     - **description**: Optional topic description
     - **color**: Hex color code (default: #3498db)
     - **icon**: Icon name (default: book)
     - **difficulty_level**: Difficulty rating 1-5 (default: 1)
     - **priority_level**: Priority rating 1-5 (default: 1)
     """
-    return topic_service.create_topic(topic_data)
+    try:
+        return topic_service.create_topic(topic_data)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @router.get("/", response_model=TopicList)
 async def list_topics(
@@ -44,18 +50,32 @@ async def list_topics(
     topic_service: TopicService = Depends(get_topic_service)
 ):
     """
-    List all topics
+    List all topics with enhanced sorting and statistics
     
     - **include_archived**: Whether to include archived topics
     """
     return topic_service.list_topics(include_archived)
+
+@router.get("/search", response_model=List[TopicResponse])
+async def search_topics(
+    q: str = Query(..., description="Search query"),
+    include_archived: bool = Query(False, description="Include archived topics"),
+    topic_service: TopicService = Depends(get_topic_service)
+):
+    """
+    Search topics by name and description
+    
+    - **q**: Search query string
+    - **include_archived**: Whether to include archived topics
+    """
+    return topic_service.search_topics(q, include_archived)
 
 @router.get("/hierarchy", response_model=List[TopicWithStats])
 async def get_topic_hierarchy(
     topic_service: TopicService = Depends(get_topic_service)
 ):
     """
-    Get topics organized hierarchically with statistics
+    Get topics organized hierarchically with comprehensive statistics
     """
     return topic_service.get_topic_hierarchy()
 
@@ -83,7 +103,7 @@ async def get_topic_with_stats(
     topic_service: TopicService = Depends(get_topic_service)
 ):
     """
-    Get topic with detailed statistics
+    Get topic with detailed statistics and analytics
     
     - **topic_id**: UUID of the topic
     """
@@ -95,6 +115,24 @@ async def get_topic_with_stats(
         )
     return topic
 
+@router.get("/{topic_id}/analytics")
+async def get_topic_analytics(
+    topic_id: UUID,
+    topic_service: TopicService = Depends(get_topic_service)
+):
+    """
+    Get comprehensive analytics for a topic
+    
+    - **topic_id**: UUID of the topic
+    """
+    analytics = topic_service.get_topic_analytics(topic_id)
+    if not analytics:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Topic not found"
+        )
+    return analytics
+
 @router.put("/{topic_id}", response_model=TopicResponse)
 async def update_topic(
     topic_id: UUID,
@@ -102,7 +140,7 @@ async def update_topic(
     topic_service: TopicService = Depends(get_topic_service)
 ):
     """
-    Update an existing topic
+    Update an existing topic with change tracking
     
     - **topic_id**: UUID of the topic to update
     - **topic_update**: Fields to update
@@ -121,7 +159,7 @@ async def archive_topic(
     topic_service: TopicService = Depends(get_topic_service)
 ):
     """
-    Archive a topic (soft delete)
+    Archive a topic (soft delete) with dependency checks
     
     - **topic_id**: UUID of the topic to archive
     """
@@ -147,6 +185,23 @@ async def restore_topic(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Topic not found"
+        )
+
+@router.post("/{topic_id}/update-progress", status_code=status.HTTP_204_NO_CONTENT)
+async def update_topic_progress(
+    topic_id: UUID,
+    topic_service: TopicService = Depends(get_topic_service)
+):
+    """
+    Recalculate and update topic progress based on current PDFs
+    
+    - **topic_id**: UUID of the topic to update
+    """
+    success = topic_service.update_topic_progress(topic_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Topic not found or update failed"
         )
 
 @router.delete("/{topic_id}", status_code=status.HTTP_204_NO_CONTENT)

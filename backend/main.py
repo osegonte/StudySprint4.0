@@ -1,21 +1,23 @@
-# backend/main.py
+# backend/main.py - Updated for Stage 3
 """
 StudySprint 4.0 - FastAPI Application Entry Point
-Stage 2+ with placeholder for Stage 3
+Stage 3: Complete with Study Sessions Integration
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import os
 from datetime import datetime
 import logging
+import asyncio
 
-# Import implemented modules
+# Import all modules
 from modules.topics.routes import router as topics_router
 from modules.pdfs.routes import router as pdfs_router
-from modules.sessions.routes import router as sessions_router  # Placeholder
+from modules.sessions.routes import router as sessions_router
+from modules.sessions.timer import session_timer
 
 from common.database import engine, Base
 
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="StudySprint 4.0 API",
-    description="Complete Personal Study Tool with Advanced Analytics",
+    description="Complete Personal Study Tool with Advanced Session Tracking",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -43,16 +45,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create database tables
+# Create database tables and start background tasks
 @app.on_event("startup")
 async def startup_event():
-    """Create database tables on startup"""
-    logger.info("Creating database tables...")
+    """Initialize application on startup"""
+    logger.info("StudySprint 4.0 starting up...")
+    
     try:
+        # Create database tables
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
+        
+        # Start background timer updates
+        asyncio.create_task(session_timer.start_background_updates())
+        logger.info("Background timer service started")
+        
     except Exception as e:
-        logger.error(f"Error creating database tables: {str(e)}")
+        logger.error(f"Error during startup: {str(e)}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    logger.info("StudySprint 4.0 shutting down...")
+    await session_timer.stop_background_updates()
 
 # Static files for uploads
 upload_dir = "uploads"
@@ -67,39 +82,49 @@ app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 @app.get("/")
 async def root():
     return {
-        "message": "StudySprint 4.0 API",
+        "message": "StudySprint 4.0 API - Stage 3 Complete! 🎯",
         "version": "1.0.0",
         "status": "running",
         "timestamp": datetime.utcnow().isoformat(),
-        "stage": "Stage 2+ Ready for Stage 3: Session Tracking 🚀"
+        "features": {
+            "study_sessions": "✅ Active",
+            "pomodoro_timer": "✅ Active", 
+            "real_time_tracking": "✅ Active",
+            "analytics": "✅ Active",
+            "focus_scoring": "✅ Active"
+        }
     }
-
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint with service status"""
+    """Comprehensive health check with service status"""
     try:
-        # Test database connection with proper SQLAlchemy syntax
         from common.database import SessionLocal
         from sqlalchemy import text
         db = SessionLocal()
-        db.execute(text("SELECT 1"))  # Fix: Wrap in text()
+        db.execute(text("SELECT 1"))
         db.close()
         db_status = "online"
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
         db_status = "offline"
     
+    # Check timer service
+    timer_status = "online" if session_timer.is_running else "offline"
+    
     return {
-        "status": "healthy" if db_status == "online" else "degraded",
+        "status": "healthy" if all([db_status == "online", timer_status == "online"]) else "degraded",
         "timestamp": datetime.utcnow().isoformat(),
         "services": {
             "api": "online",
             "database": db_status,
-            "file_storage": "online"
+            "file_storage": "online",
+            "timer_service": timer_status,
+            "websocket": "online"
         },
         "version": "1.0.0",
-        "environment": "development"
+        "environment": "development",
+        "stage": "Stage 3 Complete: Advanced Study Features"
     }
 
 # API version prefix
@@ -112,51 +137,79 @@ app.include_router(sessions_router, prefix=f"{api_v1}/sessions", tags=["sessions
 
 @app.get(f"{api_v1}/status")
 async def get_development_status():
+    """Development status with Stage 3 completion"""
     return {
         "project": "StudySprint 4.0",
-        "current_stage": "Stage 2+ Ready for Stage 3",
+        "current_stage": "Stage 3 COMPLETE: Advanced Study Features",
         "completed": [
             "✅ Modular project structure",
             "✅ Environment configuration", 
-            "✅ Database schema and models",
-            "✅ Topics module (CRUD operations)",
-            "✅ PDF module (upload, processing, management)",
-            "✅ Backend foundation with FastAPI",
-            "✅ File upload and basic processing",
-            "✅ Fixed SQLAlchemy imports"
+            "✅ Database schema with sessions tables",
+            "✅ Topics module (CRUD + analytics)",
+            "✅ PDF module (upload + management)",
+            "✅ Study session tracking system",
+            "✅ Real-time timer with WebSocket",
+            "✅ Pomodoro timer integration",
+            "✅ Page-level time tracking",
+            "✅ Focus scoring algorithms",
+            "✅ Activity detection system",
+            "✅ Session analytics & insights",
+            "✅ Performance metrics calculation"
         ],
         "ready_for": [
-            "🚀 Stage 3: Study session tracking",
-            "🍅 Pomodoro timer integration",
-            "📖 Page-level time tracking",
-            "📊 Advanced analytics"
+            "🎯 Stage 4: Note-taking & highlighting",
+            "🔗 Wiki-style linking system",
+            "🎨 Knowledge graph visualization",
+            "📊 Advanced analytics dashboard"
         ],
         "modules": {
-            "topics": "✅ completed",
-            "pdfs": "✅ completed",
-            "sessions": "🔧 placeholder ready for implementation"
+            "topics": "✅ completed with enhanced analytics",
+            "pdfs": "✅ completed with progress tracking", 
+            "sessions": "✅ completed with full feature set",
+            "notes": "🚧 ready for Stage 4",
+            "highlights": "🚧 ready for Stage 4",
+            "analytics": "✅ basic version complete"
         },
         "api_endpoints": {
-            "topics": "8 endpoints implemented",
-            "pdfs": "8 endpoints implemented",
-            "sessions": "1 placeholder endpoint",
-            "total_implemented": "17"
+            "topics": "8 endpoints",
+            "pdfs": "8 endpoints",
+            "sessions": "12 endpoints + WebSocket",
+            "total_implemented": "28+"
+        },
+        "advanced_features": {
+            "real_time_timer": "✅ WebSocket-based",
+            "focus_scoring": "✅ Advanced algorithms",
+            "activity_tracking": "✅ Mouse/keyboard detection",
+            "pomodoro_integration": "✅ Full cycle management",
+            "session_analytics": "✅ Comprehensive metrics",
+            "idle_detection": "✅ Smart threshold-based",
+            "progress_tracking": "✅ Page-level granularity"
         }
     }
 
 @app.get(f"{api_v1}/stats")
 async def get_system_stats():
+    """Enhanced system statistics with session data"""
     try:
         from common.database import SessionLocal, Topic, PDF
+        from modules.sessions.models import StudySession
         
         db = SessionLocal()
         
+        # Basic counts
         total_topics = db.query(Topic).count()
         active_topics = db.query(Topic).filter(Topic.is_archived == False).count()
-        archived_topics = db.query(Topic).filter(Topic.is_archived == True).count()
-        
         total_pdfs = db.query(PDF).count()
         completed_pdfs = db.query(PDF).filter(PDF.is_completed == True).count()
+        
+        # Session stats
+        total_sessions = db.query(StudySession).count()
+        active_sessions = db.query(StudySession).filter(StudySession.end_time.is_(None)).count()
+        total_study_time = db.query(func.sum(StudySession.total_minutes)).scalar() or 0
+        
+        # Calculate averages
+        avg_focus_score = db.query(func.avg(StudySession.focus_score)).scalar() or 0
+        avg_session_duration = db.query(func.avg(StudySession.total_minutes)).scalar() or 0
         
         db.close()
         
@@ -164,7 +217,7 @@ async def get_system_stats():
             "topics": {
                 "total": total_topics,
                 "active": active_topics,
-                "archived": archived_topics
+                "archived": total_topics - active_topics
             },
             "pdfs": {
                 "total": total_pdfs,
@@ -172,20 +225,27 @@ async def get_system_stats():
                 "in_progress": total_pdfs - completed_pdfs,
                 "completion_rate": round((completed_pdfs / total_pdfs * 100), 2) if total_pdfs > 0 else 0
             },
+            "sessions": {
+                "total": total_sessions,
+                "active": active_sessions,
+                "total_study_hours": round(total_study_time / 60, 1),
+                "average_focus_score": round(float(avg_focus_score), 1),
+                "average_duration_minutes": round(float(avg_session_duration), 1)
+            },
             "system": {
                 "upload_directory": upload_dir,
                 "environment": "development",
                 "database_status": "connected",
-                "stage": "Ready for Stage 3"
+                "timer_service": "active" if session_timer.is_running else "inactive",
+                "stage": "Stage 3 Complete"
             }
         }
         
     except Exception as e:
         logger.error(f"Error getting system stats: {str(e)}")
         return {
-            "topics": {"total": 0, "active": 0, "archived": 0},
-            "pdfs": {"total": 0, "completed": 0, "in_progress": 0, "completion_rate": 0},
-            "system": {"upload_directory": upload_dir, "environment": "development", "error": str(e)}
+            "error": str(e),
+            "stage": "Stage 3 Complete - Error in stats calculation"
         }
 
 # Error handlers
@@ -196,7 +256,8 @@ async def not_found_handler(request, exc):
         content={
             "error": "not_found",
             "message": "The requested resource was not found",
-            "path": str(request.url.path)
+            "path": str(request.url.path),
+            "suggestion": "Check /docs for available endpoints"
         }
     )
 

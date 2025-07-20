@@ -1,7 +1,7 @@
 # backend/modules/sessions/services.py
 """
-StudySprint 4.0 - Complete Study Sessions Service Layer
-Business logic for session management, timing, and analytics
+StudySprint 4.0 - Enhanced Study Sessions Service Layer
+Stage 3 Complete: Business logic for session management, timing, and analytics
 """
 
 from typing import Optional, List, Dict, Any
@@ -18,14 +18,14 @@ from .schemas import (
     StudySessionCreate, StudySessionUpdate, StudySessionEnd, StudySessionResponse,
     PageTimeCreate, PageTimeUpdate, PageTimeEnd, PageTimeResponse,
     PomodoroSessionCreate, PomodoroSessionComplete, PomodoroSessionResponse,
-    SessionSearchParams, StudySessionList, SessionAnalytics
+    SessionSearchParams, StudySessionList, SessionAnalytics, SessionType
 )
 
 logger = logging.getLogger(__name__)
 
 
 class StudySessionService:
-    """Service for managing study sessions with advanced timing and analytics"""
+    """Enhanced service for managing study sessions with advanced timing and analytics"""
     
     def __init__(self, db: Session):
         self.db = db
@@ -47,7 +47,7 @@ class StudySessionService:
             pdf_id=session_data.pdf_id,
             topic_id=session_data.topic_id,
             exercise_id=session_data.exercise_id,
-            session_type=session_data.session_type,
+            session_type=session_data.session_type.value if isinstance(session_data.session_type, SessionType) else session_data.session_type,
             session_name=session_data.session_name,
             planned_duration_minutes=session_data.planned_duration_minutes,
             starting_page=session_data.starting_page,
@@ -613,7 +613,7 @@ class PomodoroService:
         pomodoro = PomodoroSession(
             study_session_id=pomodoro_data.study_session_id,
             cycle_number=pomodoro_data.cycle_number,
-            cycle_type=pomodoro_data.cycle_type,
+            cycle_type=pomodoro_data.cycle_type.value,
             planned_duration_minutes=pomodoro_data.planned_duration_minutes,
             started_at=datetime.utcnow()
         )

@@ -2,72 +2,24 @@
 node_modules/
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+venv/
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
-# IDE
-.vscode/
+# IDE & OS
+.vscode/settings.json
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Logs
+# Logs & Testing
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.pytest_cache/
+.coverage
 
-# Python
-venv/
-env/
-.env/
-.venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Frontend
-node_modules/.cache/
-dist/
-build/
-*.tsbuildinfo
-
-# StudySprint specific
+# StudySprint uploads
 uploads/pdfs/*
 !uploads/pdfs/.gitkeep
 uploads/thumbnails/*
@@ -76,29 +28,11 @@ uploads/temp/*
 !uploads/temp/.gitkeep
 backups/*
 !backups/.gitkeep
-*.sqlite
-*.db
 
-# Testing
-.coverage
-.pytest_cache/
-test-results/
-coverage/
-
-# Temporary cleanup files
-fix_database_schema.sh
-complete_database_fix.sh
-stage2_completion_test.sh
+# Temporary files
+*.tmp
+*.temp
+*.bak
+stage3_*.sh
+stage4_*.sh
 cleanup.sh
-
-# Frontend dependencies (when implemented)
-frontend/node_modules/
-frontend/dist/
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*

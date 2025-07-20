@@ -12,15 +12,13 @@ StudySprint 4.0 is built with:
 
 ### Start Backend
 ```bash
-cd scripts
-./start_backend.sh
+./scripts/start_backend.sh
 ```
 Access: http://localhost:8000 (API docs: /docs)
 
 ### Start Frontend  
 ```bash
-cd scripts
-./start_frontend.sh
+./scripts/start_frontend.sh
 ```
 Access: http://localhost:3000
 
@@ -39,15 +37,19 @@ Access: http://localhost:3000
 StudySprint4.0/
 ├── backend/                 # Python FastAPI
 │   ├── modules/            # Feature modules
+│   │   ├── topics/         # ✅ Topic management
+│   │   └── pdfs/           # ✅ PDF management
 │   ├── common/             # Shared utilities
 │   ├── main.py             # Application entry
 │   └── venv/               # Virtual environment
 ├── frontend/               # React TypeScript
 │   ├── src/modules/        # Feature components
+│   │   ├── topics/         # ✅ Topic components
+│   │   └── pdfs/           # ✅ PDF components
 │   └── src/common/         # Shared components
 ├── uploads/                # File storage
 ├── scripts/                # Development scripts
-└── setup_backup/           # Configuration backups
+└── configuration files
 ```
 
 ## 🗄️ Database
@@ -55,7 +57,7 @@ StudySprint4.0/
 - **Name**: studysprint4_local
 - **User**: osegonte
 - **Host**: localhost:5432
-- **Tables**: topics, pdfs, notes
+- **Tables**: topics, pdfs
 
 ## 📋 Development Workflow
 
@@ -67,14 +69,15 @@ StudySprint4.0/
 ## 🎯 Current Status
 
 - ✅ **Stage 1**: Foundation Complete
-- 🔄 **Stage 2**: PDF Management & Viewer (Next)
+- ✅ **Stage 2**: PDF Management & Viewer Complete
+- 🔄 **Stage 3**: Advanced Features (Next)
 
 ## 🛠️ Next Steps
 
-Begin implementing Stage 2 features:
-1. PDF upload and management
-2. PDF viewer with PDF.js
-3. File organization system
-4. Basic study session tracking
+Begin implementing Stage 3 features:
+1. Study session tracking
+2. Note-taking system
+3. Advanced analytics
+4. Progress visualization
 
 Ready to build! 🚀

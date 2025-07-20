@@ -90,3 +90,15 @@ fix_database_schema.sh
 complete_database_fix.sh
 stage2_completion_test.sh
 cleanup.sh
+
+# Frontend dependencies (when implemented)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*

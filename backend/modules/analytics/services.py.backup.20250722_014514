@@ -13,7 +13,7 @@ import logging
 import statistics
 from collections import defaultdict
 
-from backend.common.database import Topic, PDF
+from common.database import Topic, PDF
 from modules.sessions.models import StudySession, PageTime, ReadingSpeed
 from modules.exercises.models import Exercise, ExerciseAttempt
 from modules.notes.models import Note, Highlight

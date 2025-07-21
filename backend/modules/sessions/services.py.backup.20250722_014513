@@ -12,7 +12,7 @@ from sqlalchemy import and_, or_, func, desc, asc
 import logging
 import statistics
 
-from backend.common.database import PDF, Topic
+from common.database import PDF, Topic
 from .models import StudySession, PageTime, PomodoroSession, ReadingSpeed, TimeEstimate
 from .schemas import (
     StudySessionCreate, StudySessionUpdate, StudySessionEnd, StudySessionResponse,

@@ -10,7 +10,7 @@ from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum as PyEnum
-from backend.common.database import Base
+from common.database import Base
 
 
 class GoalType(PyEnum):

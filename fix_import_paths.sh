@@ -1,3 +1,25 @@
+#!/bin/bash
+
+# 🔧 FIX STUDYSPRINT IMPORT PATHS
+# This script fixes the "No module named 'modules'" error
+
+echo "🔧 Fixing StudySprint import paths..."
+
+MAIN_PY="backend/main.py"
+
+# Create backup
+cp "$MAIN_PY" "${MAIN_PY}.backup.$(date +%Y%m%d_%H%M%S)"
+echo "📁 Backup created"
+
+# Show current content to understand the structure
+echo "📋 Current main.py structure:"
+cat "$MAIN_PY"
+
+echo ""
+echo "🔧 The issue is likely import paths. Let me create a corrected main.py..."
+
+# Create a corrected main.py
+cat > "$MAIN_PY" << 'EOF'
 # backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,3 +107,18 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+EOF
+
+echo "✅ main.py updated with correct import paths"
+echo ""
+echo "🎯 Next steps:"
+echo "1. Restart your backend:"
+echo "   # Stop current server (Ctrl+C)"
+echo "   python -m uvicorn backend.main:app --reload"
+echo ""
+echo "2. Test the endpoints:"
+echo "   curl http://localhost:8000/"
+echo "   curl http://localhost:8000/health"
+echo "   curl http://localhost:8000/docs"
+echo ""
+echo "✅ Import path fix complete!"

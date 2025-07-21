@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from backend.database import get_db
+from database import get_db
 from .schemas import (
     ExerciseCreate, ExerciseUpdate, ExerciseResponse,
     ExerciseAttemptCreate, ExerciseAttemptResponse,

@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 import re
 from typing import List, Dict, Any
-from backend.common.database import Base
+from common.database import Base
 
 
 class Note(Base):

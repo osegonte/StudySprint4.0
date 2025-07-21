@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import logging
 import json
 
-from backend.common.database import get_db
+from common.database import get_db
 from .models import StudySession, PageTime, PomodoroSession
 from .services import StudySessionService, PageTimeService, PomodoroService
 from .schemas import (

@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime, timedelta
-from backend.common.database import Base
+from common.database import Base
 
 exercise_attempts = relationship("ExerciseAttempt", back_populates="session")
 

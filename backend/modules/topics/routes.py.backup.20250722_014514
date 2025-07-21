@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
-from backend.common.database import get_db
+from common.database import get_db
 from .services import TopicService
 from .schemas import (
     TopicCreate, TopicUpdate, TopicResponse, TopicWithStats, TopicList

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from backend.database import Base
+from database import Base
 
 class Exercise(Base):
     __tablename__ = "exercises"

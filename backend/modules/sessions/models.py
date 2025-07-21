@@ -11,6 +11,8 @@ import uuid
 from datetime import datetime, timedelta
 from common.database import Base
 
+exercise_attempts = relationship("ExerciseAttempt", back_populates="session")
+
 class StudySession(Base):
     __tablename__ = "study_sessions"
     

@@ -15,6 +15,8 @@ from common.database import PDF, Topic
 
 __all__ = ['PDF', 'Topic']
 
+exercises = relationship("Exercise", back_populates="pdf")
+
 class PDF(Base):
     __tablename__ = "pdfs"
     

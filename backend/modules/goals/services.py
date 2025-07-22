@@ -1,7 +1,8 @@
 # backend/modules/goals/services.py
 """
-StudySprint 4.0 - Enhanced Goals Service
+StudySprint 4.0 - Complete Goals Service
 Stage 6 Complete: Advanced SMART goals with analytics
+REPLACE YOUR ENTIRE goals/services.py FILE WITH THIS VERSION
 """
 
 from typing import List, Optional, Dict, Any
@@ -339,7 +340,3 @@ class GoalService:
                     })
         
         return sorted(upcoming, key=lambda x: x["days_remaining"])[:5]
-
-    def get_achievements(self) -> List[Dict[str, Any]]:
-        """Get user achievements"""
-        return list(achievements_storage.values())

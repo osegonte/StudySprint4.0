@@ -3,7 +3,6 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./.storybook/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: 'class',
   theme: {
@@ -34,6 +33,9 @@ export default {
           'sans-serif',
         ],
       },
+      backdropBlur: {
+        xs: '2px',
+      }
     },
   },
   plugins: [],

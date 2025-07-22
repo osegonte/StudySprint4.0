@@ -1,40 +1,53 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'react-hot-toast'
+import { Layout } from './common/components/layout/Layout'
+import { Dashboard } from './pages/Dashboard'
 import './index.css'
 
-function Dashboard() {
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          🚀 StudySprint 4.0
-        </h1>
-        <div className="card">
-          <h2 className="text-xl font-semibold mb-4">✅ Stage 1 Complete!</h2>
-          <div className="space-y-2 text-gray-600">
-            <p>✅ React + TypeScript + Vite configured</p>
-            <p>✅ Tailwind CSS with Apple HIG design tokens</p>
-            <p>✅ Project structure created</p>
-            <p>✅ Development environment ready</p>
-          </div>
-          <div className="mt-6">
-            <button className="btn-primary">
-              Ready for Stage 2 Implementation
-            </button>
-          </div>
-        </div>
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+})
+
+// Simple placeholder pages
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="flex items-center justify-center min-h-96">
+    <div className="text-center">
+      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <span className="text-white text-xl">🚀</span>
       </div>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{title}</h1>
+      <p className="text-gray-600 dark:text-gray-400">Coming in Stage 2</p>
     </div>
-  )
-}
+  </div>
+)
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-      </Routes>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/topics" element={<PlaceholderPage title="Topics" />} />
+            <Route path="/pdfs" element={<PlaceholderPage title="PDF Library" />} />
+            <Route path="/study" element={<PlaceholderPage title="Study Session" />} />
+            <Route path="/notes" element={<PlaceholderPage title="Notes" />} />
+            <Route path="/goals" element={<PlaceholderPage title="Goals" />} />
+            <Route path="/analytics" element={<PlaceholderPage title="Analytics" />} />
+            <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+          </Routes>
+        </Layout>
+        <Toaster position="top-right" />
+      </Router>
+    </QueryClientProvider>
   )
 }
 

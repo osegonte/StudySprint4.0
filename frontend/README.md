@@ -1,54 +1,69 @@
-# StudySprint 4.0 Frontend (Placeholder)
+# React + TypeScript + Vite
 
-## 🚧 Development Status
-**Frontend development is paused** - focusing on backend completion first.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 🎯 Backend-First Strategy
-1. Complete all backend modules (Weeks 1-6)
-2. Comprehensive testing & optimization (Weeks 7-8) 
-3. Frontend development with stable APIs (Weeks 9-11)
+Currently, two official plugins are available:
 
-## 🔗 Backend Development
-- **API Documentation**: http://localhost:8000/docs
-- **Backend Status**: http://localhost:8000/api/v1/status
-- **Health Check**: http://localhost:8000/health
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## 📋 When Ready for Frontend
-```bash
-# Install React with TypeScript + Vite
-npm create vite@latest . -- --template react-ts
+## Expanding the ESLint configuration
 
-# Install additional dependencies
-npm install react-router-dom axios react-query
-npm install -D tailwindcss postcss autoprefixer
-npm install react-pdf pdfjs-dist chart.js d3
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-# Initialize Tailwind
-npx tailwindcss init -p
+```js
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      ...tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      ...tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      ...tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## 🎨 Planned Frontend Architecture
-```
-src/
-├── components/          # Reusable UI components
-├── pages/              # Page-level components
-├── hooks/              # Custom React hooks
-├── services/           # API client services
-├── types/              # TypeScript definitions
-├── utils/              # Helper functions
-└── stores/             # State management
-```
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-## 🚀 Features to Implement (Weeks 9-11)
-- [ ] Dashboard with real-time analytics
-- [ ] PDF viewer with highlighting
-- [ ] Study timer with session tracking
-- [ ] Notes editor with wiki-style linking
-- [ ] Knowledge graph visualization
-- [ ] Exercise management interface
-- [ ] Goal tracking and progress visualization
-- [ ] Mobile-responsive design
-- [ ] PWA capabilities
-- [ ] Dark mode support
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-**Status**: 🔄 Waiting for backend completion
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```

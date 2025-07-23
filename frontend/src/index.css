@@ -1,0 +1,393 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* StudySprint 4.0 Design System - Academic Focus Theme */
+
+@layer base {
+  :root {
+    /* Core academic color palette */
+    --background: 250 100% 99%;
+    --foreground: 222 47% 11%;
+
+    /* Card and surface colors */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --card-hover: 240 100% 98%;
+
+    /* Popover colors */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Deep academic blue */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 217 20% 94%;
+
+    /* Secondary - Soft focus blue */
+    --secondary: 240 15% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --secondary-hover: 240 20% 92%;
+
+    /* Success - Calming green for achievements */
+    --success: 158 64% 52%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 158 30% 95%;
+
+    /* Warning - Warm amber for attention */
+    --warning: 48 96% 53%;
+    --warning-foreground: 222 47% 11%;
+    --warning-muted: 48 50% 95%;
+
+    /* Muted colors for subtle elements */
+    --muted: 240 15% 96%;
+    --muted-foreground: 240 6% 50%;
+
+    /* Accent - Energizing purple for highlights */
+    --accent: 262 83% 58%;
+    --accent-foreground: 0 0% 100%;
+    --accent-muted: 262 30% 95%;
+
+    /* Focus - Deep teal for study sessions */
+    --focus: 184 77% 34%;
+    --focus-foreground: 0 0% 100%;
+    --focus-muted: 184 25% 94%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border and input */
+    --border: 240 15% 91%;
+    --input: 240 15% 96%;
+    --ring: 217 91% 60%;
+
+    /* Border radius */
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Dark mode academic theme */
+    --background: 222 47% 6%;
+    --foreground: 240 100% 98%;
+
+    --card: 222 47% 8%;
+    --card-foreground: 240 100% 98%;
+    --card-hover: 222 47% 10%;
+
+    --popover: 222 47% 8%;
+    --popover-foreground: 240 100% 98%;
+
+    --primary: 217 91% 65%;
+    --primary-foreground: 222 47% 6%;
+    --primary-muted: 217 30% 15%;
+
+    --secondary: 240 15% 12%;
+    --secondary-foreground: 240 100% 98%;
+    --secondary-hover: 240 15% 15%;
+
+    --success: 158 64% 55%;
+    --success-foreground: 222 47% 6%;
+    --success-muted: 158 30% 12%;
+
+    --warning: 48 96% 58%;
+    --warning-foreground: 222 47% 6%;
+    --warning-muted: 48 50% 12%;
+
+    --muted: 240 15% 12%;
+    --muted-foreground: 240 15% 65%;
+
+    --accent: 262 83% 65%;
+    --accent-foreground: 222 47% 6%;
+    --accent-muted: 262 30% 15%;
+
+    --focus: 184 77% 40%;
+    --focus-foreground: 222 47% 6%;
+    --focus-muted: 184 25% 15%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 222 47% 6%;
+
+    --border: 240 15% 18%;
+    --input: 240 15% 12%;
+    --ring: 217 91% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+    font-variation-settings: "opsz" auto;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  /* Study-focused utility classes */
+  .study-card {
+    @apply bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  .study-card:hover {
+    @apply shadow-lg bg-card-hover;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%));
+  }
+  
+  .gradient-focus {
+    background: linear-gradient(135deg, hsl(184 77% 34%), hsl(217 91% 60%));
+  }
+  
+  .gradient-success {
+    background: linear-gradient(135deg, hsl(158 64% 52%), hsl(184 77% 34%));
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Loading animations */
+  .animate-pulse-soft {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  /* Focus states */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  /* Study session specific styles */
+  .timer-display {
+    @apply font-mono text-6xl font-bold bg-gradient-to-r from-focus to-primary bg-clip-text text-transparent;
+  }
+
+  .progress-ring {
+    transform: rotate(-90deg);
+  }
+
+  .progress-ring-fill {
+    transition: stroke-dashoffset 0.3s ease;
+  }
+
+  /* Card hover effects */
+  .card-interactive {
+    @apply cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg;
+  }
+
+  /* Topic color indicators */
+  .topic-indicator {
+    @apply w-1 h-full rounded-full;
+  }
+
+  /* Status indicators */
+  .status-active {
+    @apply bg-success text-success-foreground;
+  }
+
+  .status-inactive {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .status-warning {
+    @apply bg-warning text-warning-foreground;
+  }
+
+  .status-error {
+    @apply bg-destructive text-destructive-foreground;
+  }
+
+  /* PDF viewer styles */
+  .pdf-page {
+    @apply border border-border rounded-lg shadow-sm bg-white;
+  }
+
+  .pdf-highlight {
+    @apply bg-warning/30 border-l-4 border-warning;
+  }
+
+  /* Note editor styles */
+  .note-editor {
+    @apply min-h-96 p-4 border border-border rounded-lg bg-background;
+  }
+
+  .note-link {
+    @apply text-primary hover:text-primary/80 underline decoration-primary/50;
+  }
+
+  /* Analytics chart styles */
+  .chart-container {
+    @apply bg-card rounded-lg p-4 border border-border;
+  }
+
+  .chart-tooltip {
+    @apply bg-popover border border-border rounded-lg shadow-lg p-3 text-sm;
+  }
+
+  /* Goal progress styles */
+  .goal-progress-ring {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  .goal-milestone {
+    @apply w-4 h-4 rounded-full border-2 transition-all duration-200;
+  }
+
+  .goal-milestone.completed {
+    @apply bg-success border-success;
+  }
+
+  .goal-milestone.current {
+    @apply bg-primary border-primary;
+  }
+
+  .goal-milestone.pending {
+    @apply bg-background border-muted-foreground;
+  }
+
+  /* Exercise styles */
+  .exercise-card {
+    @apply bg-card border-l-4 border-primary rounded-lg p-6 shadow-sm;
+  }
+
+  .exercise-correct {
+    @apply border-l-success bg-success/5;
+  }
+
+  .exercise-incorrect {
+    @apply border-l-destructive bg-destructive/5;
+  }
+
+  /* Session timer styles */
+  .pomodoro-timer {
+    @apply relative w-48 h-48 rounded-full border-8 border-muted;
+  }
+
+  .pomodoro-progress {
+    @apply absolute inset-0 rounded-full;
+    background: conic-gradient(from 0deg, hsl(var(--primary)) 0%, hsl(var(--primary)) var(--progress, 0%), transparent var(--progress, 0%));
+  }
+
+  /* Study streak styles */
+  .streak-flame {
+    @apply text-warning;
+    filter: drop-shadow(0 0 8px hsl(var(--warning)));
+  }
+
+  /* Notification styles */
+  .notification-enter {
+    @apply opacity-0 transform translate-x-full;
+  }
+
+  .notification-enter-active {
+    @apply opacity-100 transform translate-x-0 transition-all duration-300;
+  }
+
+  .notification-exit {
+    @apply opacity-100 transform translate-x-0;
+  }
+
+  .notification-exit-active {
+    @apply opacity-0 transform translate-x-full transition-all duration-300;
+  }
+
+  /* Achievement badge styles */
+  .achievement-badge {
+    @apply relative inline-flex items-center justify-center w-16 h-16 rounded-full;
+  }
+
+  .achievement-unlocked {
+    background: linear-gradient(135deg, hsl(var(--warning)), hsl(var(--success)));
+    box-shadow: 0 0 20px hsl(var(--warning) / 0.5);
+  }
+
+  .achievement-locked {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  /* Mobile responsive utilities */
+  @media (max-width: 768px) {
+    .study-card {
+      @apply p-4;
+    }
+
+    .timer-display {
+      @apply text-4xl;
+    }
+
+    .mobile-hidden {
+      @apply hidden;
+    }
+
+    .mobile-full {
+      @apply w-full;
+    }
+  }
+
+  /* Print styles */
+  @media print {
+    .no-print {
+      @apply hidden;
+    }
+
+    .study-card {
+      @apply border border-gray-300 shadow-none;
+    }
+  }
+
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .study-card {
+      @apply border-2;
+    }
+
+    .gradient-primary {
+      background: hsl(var(--primary));
+    }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -126,33 +126,7 @@ const Goals = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="study-card text-center">
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowCreateForm(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  className="flex-1"
-                  disabled={createGoalMutation.isPending}
-                >
-                  {createGoalMutation.isPending ? (
-                    <LoadingSpinner size="sm" className="mr-2" />
-                  ) : null}
-                  Create Goal
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Goals;w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
                 <Target className="h-5 w-5 text-primary" />
               </div>
               <p className="text-2xl font-bold text-foreground">{summary.total_goals}</p>
@@ -355,4 +329,30 @@ export default Goals;w-10 h-10 bg-primary/10 rounded-lg flex items-center justif
                 </div>
               </div>
               
-              <div className="
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCreateForm(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  className="flex-1"
+                  disabled={createGoalMutation.isPending}
+                >
+                  {createGoalMutation.isPending ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : null}
+                  Create Goal
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Goals;

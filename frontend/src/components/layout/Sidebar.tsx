@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar.tsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ import {
   GraduationCap,
   Brain
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
@@ -28,6 +30,7 @@ const navigation = [
 
 export const Sidebar = () => {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r border-border">
@@ -37,7 +40,7 @@ export const Sidebar = () => {
           <GraduationCap className="h-5 w-5 text-primary-foreground" />
         </div>
         <span className="text-lg font-semibold text-foreground">StudySprint</span>
-        <span className="text-xs text-muted-foreground bg-primary-muted px-2 py-1 rounded-full">v4.0</span>
+        <span className="text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-1 rounded-full">v4.0</span>
       </div>
 
       {/* Navigation */}
@@ -66,14 +69,14 @@ export const Sidebar = () => {
       <div className="border-t border-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full text-white font-medium text-sm">
-            U
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
-              Study User
+              {user?.name || 'Guest User'}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              Level 12 Scholar
+              {user?.level ? `Level ${user.level} Scholar` : 'Getting Started'}
             </p>
           </div>
         </div>

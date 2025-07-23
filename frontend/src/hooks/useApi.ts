@@ -153,6 +153,36 @@ export const useEndSession = () => {
   });
 };
 
+export const usePauseSession = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: API.sessions.pauseSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CURRENT_SESSION] });
+      toast.success('Session paused');
+    },
+    onError: (error) => {
+      toast.error(handleApiError(error));
+    },
+  });
+};
+
+export const useResumeSession = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: API.sessions.resumeSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CURRENT_SESSION] });
+      toast.success('Session resumed');
+    },
+    onError: (error) => {
+      toast.error(handleApiError(error));
+    },
+  });
+};
+
 // Goals Hooks
 export const useGoals = (params?: any) => {
   return useQuery({
@@ -198,6 +228,15 @@ export const useCreateNote = () => {
     onError: (error) => {
       toast.error(handleApiError(error));
     },
+  });
+};
+
+// Exercises Hooks
+export const useExercisesAnalytics = () => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.ANALYTICS, 'exercises'],
+    queryFn: API.exercises.getAnalyticsOverview,
+    staleTime: 2 * 60 * 1000,
   });
 };
 

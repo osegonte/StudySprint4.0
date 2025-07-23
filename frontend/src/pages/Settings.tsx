@@ -41,17 +41,6 @@ const Switch: React.FC<{
   </button>
 );
 
-// Simple Textarea component
-const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = ({ 
-  className, 
-  ...props 
-}) => (
-  <textarea
-    className={`flex min-h-20 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-    {...props}
-  />
-);
-
 // Simple Tabs implementation
 const TabsList: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <div className={`flex bg-muted rounded-lg p-1 ${className}`}>{children}</div>
@@ -87,7 +76,7 @@ const TabsContent: React.FC<{ value: string; activeTab: string; children: React.
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
 
   const [notifications, setNotifications] = useState({
     studyReminders: true,
@@ -97,8 +86,8 @@ const Settings = () => {
   });
 
   const [profile, setProfile] = useState({
-    name: user?.name || 'Study User',
-    email: user?.email || 'user@studysprint.com',
+    name: user?.name || '',
+    email: user?.email || '',
     studyLevel: 'Intermediate',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
@@ -114,6 +103,14 @@ const Settings = () => {
     try {
       // TODO: Implement actual save functionality with backend
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      if (section === 'profile') {
+        updateProfile({
+          name: profile.name,
+          email: profile.email
+        });
+      }
+      
       console.log(`Saving ${section} settings...`);
     } catch (error) {
       console.error(`Failed to save ${section} settings:`, error);
@@ -176,11 +173,13 @@ const Settings = () => {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-xl font-bold">
-                  {profile.name.charAt(0)}
+                  {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground">{profile.name}</h3>
-                  <p className="text-muted-foreground">{profile.email}</p>
+                  <h3 className="text-xl font-semibold text-foreground">
+                    {profile.name || 'Your Name'}
+                  </h3>
+                  <p className="text-muted-foreground">{profile.email || 'your.email@example.com'}</p>
                   {user?.level && (
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
@@ -203,6 +202,7 @@ const Settings = () => {
                     id="name"
                     value={profile.name}
                     onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                    placeholder="Enter your full name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -212,6 +212,7 @@ const Settings = () => {
                     type="email"
                     value={profile.email}
                     onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    placeholder="Enter your email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -419,19 +420,19 @@ const Settings = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Study Sessions</span>
-                      <span>--</span>
+                      <span>0 MB</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Notes</span>
-                      <span>--</span>
+                      <span>0 MB</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>PDFs</span>
-                      <span>--</span>
+                      <span>0 MB</span>
                     </div>
                     <div className="border-t border-border pt-2 flex justify-between font-medium">
                       <span>Total</span>
-                      <span>Connect to backend to see usage</span>
+                      <span>0 MB</span>
                     </div>
                   </div>
                 </div>
@@ -515,7 +516,7 @@ const Settings = () => {
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
                   <span>Last Updated</span>
-                  <span>Connect to backend for version info</span>
+                  <span>{new Date().toLocaleDateString()}</span>
                 </div>
               </div>
             </div>

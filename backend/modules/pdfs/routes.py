@@ -11,7 +11,7 @@ from typing import Optional, List
 from uuid import UUID
 import io
 
-from backend.common.database import get_db
+from common.database import get_db
 from .services import PDFService, PDFContentService
 from .schemas import (
     PDFCreate, PDFUpdate, PDFResponse, PDFList, PDFSearchRequest,

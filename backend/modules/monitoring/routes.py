@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import time
 
-from backend.common.database import get_db
+from common.database import get_db
 from backend.common.performance import get_performance_monitor, get_performance_cache
 
 router = APIRouter()

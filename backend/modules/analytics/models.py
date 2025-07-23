@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime, date
-from backend.common.database import Base
+from common.database import Base
 
 
 class DailyStats(Base):

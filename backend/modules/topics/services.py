@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from datetime import datetime, timedelta
 
-from backend.common.database import Topic, PDF
+from common.database import Topic, PDF
 from .schemas import TopicCreate, TopicUpdate, TopicResponse, TopicWithStats, TopicList
 import logging
 

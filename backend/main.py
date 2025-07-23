@@ -1,141 +1,93 @@
-# StudySprint 4.0 - Enhanced Main with Performance Optimizations
+# StudySprint 4.0 - Fixed Main Application with Proper CORS
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
+import sys
+import os
 
-# Performance imports
-try:
-    from common.performance import performance_middleware, get_performance_monitor
-    PERFORMANCE_AVAILABLE = True
-    print("✅ Performance monitoring enabled")
-except ImportError:
-    PERFORMANCE_AVAILABLE = False
-    print("⚠️  Performance monitoring not available")
+# Add current directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Create FastAPI app
 app = FastAPI(
     title="StudySprint 4.0 API",
-    description="Advanced Study Management System - Performance Optimized",
+    description="Advanced Study Management System - Ready for Frontend",
     version="4.0.0"
 )
 
-# Add performance middleware
-if PERFORMANCE_AVAILABLE:
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
-    
-    @app.middleware("http")
-    async def add_performance_monitoring(request: Request, call_next):
-        return await performance_middleware(request, call_next)
-
-# Add CORS middleware
+# CORS middleware - MUST be first and properly configured
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
+    allow_origins=["*"],  # Allow all origins for development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Import existing routers
+# GZip middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Track loaded modules
 routers_loaded = []
 
-try:
-    from modules.topics.routes import router as topics_router
-    app.include_router(topics_router, prefix="/topics", tags=["topics"])
-    routers_loaded.append("topics")
-    print("✅ Topics routes loaded")
-except ImportError as e:
-    print(f"⚠️  Topics routes not available: {e}")
-
-try:
-    from modules.pdfs.routes import router as pdfs_router
-    app.include_router(pdfs_router, prefix="/pdfs", tags=["pdfs"])
-    routers_loaded.append("pdfs")
-    print("✅ PDFs routes loaded")
-except ImportError as e:
-    print(f"⚠️  PDFs routes not available: {e}")
-
-try:
-    from modules.sessions.routes import router as sessions_router
-    app.include_router(sessions_router, prefix="/study-sessions", tags=["sessions"])
-    routers_loaded.append("sessions")
-    print("✅ Sessions routes loaded")
-except ImportError as e:
-    print(f"⚠️  Sessions routes not available: {e}")
-
-try:
-    from modules.notes.routes import router as notes_router
-    app.include_router(notes_router, prefix="/notes", tags=["notes"])
-    routers_loaded.append("notes")
-    print("✅ Notes routes loaded")
-except ImportError as e:
-    print(f"⚠️  Notes routes not available: {e}")
-
-try:
-    from modules.exercises.routes import router as exercises_router
-    app.include_router(exercises_router, prefix="/exercises", tags=["exercises"])
-    routers_loaded.append("exercises")
-    print("✅ Exercise routes loaded")
-except ImportError as e:
-    print(f"⚠️  Exercise routes not available: {e}")
-
-try:
-    from modules.goals.routes import router as goals_router
-    app.include_router(goals_router, prefix="/goals", tags=["goals"])
-    routers_loaded.append("goals")
-    print("✅ Goals routes loaded")
-except ImportError as e:
-    print(f"⚠️  Goals routes not available: {e}")
-
-try:
-    from modules.analytics.routes import router as analytics_router
-    app.include_router(analytics_router, prefix="/analytics", tags=["analytics"])
-    routers_loaded.append("analytics")
-    print("✅ Analytics routes loaded")
-except ImportError as e:
-    print(f"⚠️  Analytics routes not available: {e}")
-
-# Performance monitoring routes
-if PERFORMANCE_AVAILABLE:
+# Import and register routers with error handling
+def safe_import_router(module_path, router_name, prefix, tag):
     try:
-        from modules.monitoring.routes import router as monitoring_router
-        app.include_router(monitoring_router, prefix="/monitoring", tags=["monitoring"])
-        routers_loaded.append("monitoring")
-        print("✅ Performance monitoring routes loaded")
-    except ImportError as e:
-        print(f"⚠️  Monitoring routes not available: {e}")
+        module = __import__(module_path, fromlist=[router_name])
+        router = getattr(module, router_name)
+        app.include_router(router, prefix=prefix, tags=[tag])
+        routers_loaded.append(tag)
+        print(f"✅ {tag.title()} routes loaded")
+        return True
+    except Exception as e:
+        print(f"⚠️  {tag.title()} routes not available: {e}")
+        return False
 
-# Enhanced health check endpoint
+# Load all routers
+safe_import_router("modules.topics.routes", "router", "/topics", "topics")
+safe_import_router("modules.pdfs.routes", "router", "/pdfs", "pdfs")
+safe_import_router("modules.sessions.routes", "router", "/study-sessions", "sessions")
+safe_import_router("modules.notes.routes", "router", "/notes", "notes")
+safe_import_router("modules.exercises.routes", "router", "/exercises", "exercises")
+safe_import_router("modules.goals.routes", "router", "/goals", "goals")
+safe_import_router("modules.analytics.routes", "router", "/analytics", "analytics")
+
+# Health check endpoint
 @app.get("/health")
 async def health_check():
     return {
         "status": "healthy",
         "version": "4.0.0",
-        "performance_optimized": PERFORMANCE_AVAILABLE,
         "modules_loaded": routers_loaded,
-        "features": {
-            "redis_caching": PERFORMANCE_AVAILABLE,
-            "performance_monitoring": PERFORMANCE_AVAILABLE,
-            "gzip_compression": True
-        }
+        "cors_enabled": True,
+        "frontend_ready": True
     }
 
 # Root endpoint
 @app.get("/")
 async def root():
     return {
-        "message": "StudySprint 4.0 API - Performance Optimized",
+        "message": "StudySprint 4.0 API - Ready for Frontend Connection",
         "version": "4.0.0",
         "docs": "/docs",
-        "performance_enabled": PERFORMANCE_AVAILABLE,
-        "monitoring": "/monitoring/health" if PERFORMANCE_AVAILABLE else None,
-        "features": [
-            "Real-time performance monitoring",
-            "Redis caching",
-            "Database optimization",
-            "Request timing analytics"
-        ] if PERFORMANCE_AVAILABLE else ["Basic functionality"]
+        "health": "/health",
+        "modules": routers_loaded,
+        "cors_enabled": True
     }
+
+# Explicit CORS preflight handler for all paths
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str):
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "86400"
+        }
+    )
 
 if __name__ == "__main__":
     import uvicorn

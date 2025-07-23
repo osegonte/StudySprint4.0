@@ -15,7 +15,7 @@ from sqlalchemy import and_, or_, func
 from fastapi import UploadFile, HTTPException, status
 import logging
 
-from backend.common.database import PDF, Topic
+from common.database import PDF, Topic
 from .schemas import PDFCreate, PDFUpdate, PDFSearchRequest, PDFResponse, PDFList
 import uuid
 

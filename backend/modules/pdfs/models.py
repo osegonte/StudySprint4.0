@@ -10,8 +10,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from datetime import datetime
-from backend.common.database import Base
-from backend.common.database import PDF, Topic
+from common.database import Base
+from common.database import PDF, Topic
 
 __all__ = ['PDF', 'Topic']
 

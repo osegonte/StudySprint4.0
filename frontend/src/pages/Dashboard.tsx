@@ -4,263 +4,160 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { EmptyState } from '@/components/common/EmptyState';
 import { 
   Clock, 
-  Flame, 
   Brain, 
   Target, 
   Play,
   BookOpen,
   TrendingUp,
-  CheckCircle,
   Plus,
-  Calendar,
-  Award,
-  Zap,
-  Coffee,
-  ChevronRight,
   Star,
-  AlertCircle,
-  Users,
-  Trophy
+  GraduationCap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAnalyticsDashboard, useCurrentSession } from '@/hooks/useApi';
+import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalyticsDashboard();
+  const { data: currentSession, isLoading: sessionLoading } = useCurrentSession();
 
-  // Enhanced mock data with more detail
-  const stats = {
-    todayStudyTime: 85,
-    weeklyStudyTime: 12.5,
-    currentStreak: 15,
-    bestStreak: 28,
-    focusScore: 87,
-    activeGoals: 6,
-    completedGoals: 18,
-    totalXP: 2450,
-    level: 12,
-    nextLevelXP: 2750
-  };
+  if (analyticsLoading || sessionLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-96">
+        <LoadingSpinner size="lg" text="Loading your dashboard..." />
+      </div>
+    );
+  }
+
+  if (analyticsError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Unable to load dashboard"
+          description="We're having trouble connecting to your data. Please try refreshing the page."
+          icon={<TrendingUp className="h-12 w-12" />}
+          action={{
+            label: "Refresh",
+            onClick: () => window.location.reload()
+          }}
+        />
+      </div>
+    );
+  }
 
   const quickActions = [
     {
-      id: 'continue-session',
-      title: 'Continue Last Session',
-      description: 'Advanced Calculus - Chapter 12',
-      icon: Play,
+      id: 'start-session',
+      title: currentSession ? 'Continue Session' : 'Start Study Session',
+      description: currentSession ? `${currentSession.session_name || 'Active session'} - ${Math.floor(currentSession.total_minutes)}min` : 'Begin a focused study session',
+      icon: currentSession ? Play : Clock,
       color: 'bg-primary',
       action: () => navigate('/study'),
-      progress: 68,
-      timeLeft: '25 min remaining'
+      highlight: !!currentSession
     },
     {
-      id: 'start-pomodoro',
-      title: 'Start Pomodoro',
-      description: '25 min focused session',
-      icon: Clock,
-      color: 'bg-focus',
-      action: () => navigate('/study'),
-      highlight: true
-    },
-    {
-      id: 'review-notes',
-      title: 'Review Notes',
-      description: '3 new highlights to review',
+      id: 'browse-topics',
+      title: 'Browse Topics',
+      description: 'Explore your study subjects',
       icon: BookOpen,
+      color: 'bg-focus',
+      action: () => navigate('/topics')
+    },
+    {
+      id: 'pdf-library',
+      title: 'PDF Library',
+      description: 'Access your study materials',
+      icon: GraduationCap,
       color: 'bg-success',
-      action: () => navigate('/notes'),
-      count: 3
+      action: () => navigate('/pdfs')
     },
     {
-      id: 'practice-exercises',
-      title: 'Practice Exercises',
-      description: '5 exercises due today',
-      icon: Brain,
-      color: 'bg-warning',
-      action: () => navigate('/exercises'),
-      count: 5,
-      urgent: true
-    }
-  ];
-
-  const recentActivity = [
-    {
-      id: '1',
-      type: 'completion',
-      title: 'Completed Chapter 12: Integration Techniques',
-      description: 'Mathematics - Advanced Calculus',
-      timestamp: '2 hours ago',
-      badge: 'Mathematics',
-      badgeColor: 'bg-primary',
-      xp: 150,
-      icon: CheckCircle,
-      iconColor: 'text-success'
-    },
-    {
-      id: '2',
-      type: 'achievement',
-      title: 'Achievement Unlocked: Study Streak Master',
-      description: 'Studied for 15 consecutive days',
-      timestamp: '3 hours ago',
-      badge: 'Achievement',
-      badgeColor: 'bg-warning',
-      xp: 200,
-      icon: Trophy,
-      iconColor: 'text-warning'
-    },
-    {
-      id: '3',
-      type: 'addition',
-      title: 'Added 5 new highlights',
-      description: 'Quantum Mechanics Fundamentals',
-      timestamp: '4 hours ago',
-      badge: 'Physics',
-      badgeColor: 'bg-focus',
-      xp: 25,
-      icon: Plus,
-      iconColor: 'text-focus'
-    },
-    {
-      id: '4',
-      type: 'goal',
-      title: 'Goal milestone reached',
-      description: 'Study 20 hours this week - 18/20 completed',
-      timestamp: '6 hours ago',
-      badge: 'Goal',
-      badgeColor: 'bg-accent',
+      id: 'set-goals',
+      title: 'Set Goals',
+      description: 'Track your progress',
       icon: Target,
-      iconColor: 'text-accent'
-    },
-    {
-      id: '5',
-      type: 'session',
-      title: '2.5 hour study session completed',
-      description: 'Focus score: 92% • Productivity: High',
-      timestamp: 'Yesterday',
-      badge: 'Session',
-      badgeColor: 'bg-success',
-      xp: 125,
-      icon: Clock,
-      iconColor: 'text-success'
+      color: 'bg-warning',
+      action: () => navigate('/goals')
     }
   ];
 
-  const upcomingTasks = [
-    {
-      id: '1',
-      title: 'Linear Algebra Assignment Due',
-      description: 'Chapter 8 exercises',
-      dueDate: 'Tomorrow',
-      priority: 'high',
-      type: 'assignment'
-    },
-    {
-      id: '2',
-      title: 'Physics Lab Report',
-      description: 'Quantum mechanics experiment',
-      dueDate: 'In 3 days',
-      priority: 'medium',
-      type: 'lab'
-    },
-    {
-      id: '3',
-      title: 'Study Group Meeting',
-      description: 'Calculus review session',
-      dueDate: 'Friday 2:00 PM',
-      priority: 'low',
-      type: 'meeting'
-    }
-  ];
-
-  const weeklyProgress = {
-    studyGoal: 25,
-    currentHours: 18.5,
-    dailyGoals: [
-      { day: 'Mon', target: 4, actual: 3.5, completed: true },
-      { day: 'Tue', target: 3, actual: 3.2, completed: true },
-      { day: 'Wed', target: 4, actual: 2.8, completed: false },
-      { day: 'Thu', target: 3, actual: 4.1, completed: true },
-      { day: 'Fri', target: 4, actual: 2.5, completed: false },
-      { day: 'Sat', target: 4, actual: 2.4, completed: false },
-      { day: 'Sun', target: 3, actual: 0, completed: false }
-    ]
-  };
-
-  const progressPercentage = (weeklyProgress.currentHours / weeklyProgress.studyGoal) * 100;
-  const levelProgress = ((stats.totalXP - (stats.level - 1) * 250) / 250) * 100;
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'border-l-destructive bg-destructive/5';
-      case 'medium': return 'border-l-warning bg-warning/5';
-      case 'low': return 'border-l-success bg-success/5';
-      default: return 'border-l-muted';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'assignment': return BookOpen;
-      case 'lab': return Brain;
-      case 'meeting': return Users;
-      default: return Calendar;
-    }
+  // Extract data with fallbacks
+  const stats = {
+    todayStudyTime: analytics?.quick_stats?.today_study_time || 0,
+    weeklyStudyTime: Math.round((analytics?.overview?.study?.weekly_study_hours?.reduce((a: number, b: number) => a + b, 0) || 0) / 60),
+    focusScore: analytics?.overview?.study?.avg_focus_score || 0,
+    activeGoals: analytics?.overview?.goals?.active_goals || 0,
+    completedGoals: analytics?.overview?.goals?.completed_goals || 0,
+    totalXP: analytics?.overview?.goals?.total_xp || 0,
+    currentStreak: analytics?.quick_stats?.current_streak || 0
   };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Enhanced Header with Level Progress */}
+      {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-foreground">Good afternoon! 👋</h1>
-              <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-warning" />
-                <span className="font-semibold text-foreground">Level {stats.level}</span>
-              </div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome back{user?.name ? `, ${user.name}` : ''}! 👋
+              </h1>
+              {user?.level && (
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-warning" />
+                  <span className="font-semibold text-foreground">Level {user.level}</span>
+                </div>
+              )}
             </div>
             <p className="text-muted-foreground">
-              You're making great progress! Keep up the momentum.
+              {analytics?.insights?.[0] || "Ready to continue your learning journey?"}
             </p>
           </div>
-          <div className="text-right">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="h-4 w-4 text-warning" />
-              <span className="text-sm text-muted-foreground">
-                {stats.totalXP} / {stats.nextLevelXP} XP
-              </span>
+          {user?.xp && user?.level && (
+            <div className="text-right">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-muted-foreground">
+                  {user.xp} / {(user.level * 250)} XP
+                </span>
+              </div>
+              <Progress value={(user.xp % 250) / 250 * 100} className="w-32 h-2" />
             </div>
-            <Progress value={levelProgress} className="w-32 h-2" />
-          </div>
+          )}
         </div>
 
-        {/* Daily Streak Banner */}
-        <Card className="study-card bg-gradient-to-r from-warning/10 to-success/10 border-warning/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-warning/20 rounded-full flex items-center justify-center">
-                <Flame className="h-6 w-6 text-warning" />
+        {/* Current Session Banner */}
+        {currentSession && (
+          <Card className="study-card bg-gradient-to-r from-primary/10 to-focus/10 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                  <Play className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">
+                    Session in Progress
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {currentSession.session_name || 'Study Session'} • {Math.floor(currentSession.total_minutes)} minutes
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground">
-                  🔥 {stats.currentStreak} Day Streak!
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Personal best: {stats.bestStreak} days • You're on fire!
-                </p>
-              </div>
+              <Button onClick={() => navigate('/study')}>
+                Continue Session
+              </Button>
             </div>
-            <Button variant="outline" size="sm">
-              Share Achievement
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
 
-      {/* Enhanced Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <Card className="study-card text-center hover:shadow-md transition-shadow">
           <div className="space-y-2">
             <div className="w-12 h-12 bg-focus/10 rounded-lg flex items-center justify-center mx-auto">
@@ -276,7 +173,7 @@ const Dashboard = () => {
         <Card className="study-card text-center hover:shadow-md transition-shadow">
           <div className="space-y-2">
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
-              <Calendar className="h-6 w-6 text-primary" />
+              <TrendingUp className="h-6 w-6 text-primary" />
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{stats.weeklyStudyTime}h</p>
@@ -309,204 +206,116 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        <Card className="study-card text-center hover:shadow-md transition-shadow">
-          <div className="space-y-2">
-            <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center mx-auto">
-              <Trophy className="h-6 w-6 text-warning" />
+        {/* Show additional stats only if data exists */}
+        {stats.completedGoals > 0 && (
+          <Card className="study-card text-center hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center mx-auto">
+                <Star className="h-6 w-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.completedGoals}</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{stats.completedGoals}</p>
-              <p className="text-xs text-muted-foreground">Completed</p>
+          </Card>
+        )}
+
+        {stats.totalXP > 0 && (
+          <Card className="study-card text-center hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center mx-auto">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.totalXP}</p>
+                <p className="text-xs text-muted-foreground">Total XP</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {stats.currentStreak > 0 && (
+          <Card className="study-card text-center hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto">
+                <span className="text-xl">🔥</span>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.currentStreak}</p>
+                <p className="text-xs text-muted-foreground">Day Streak</p>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Card
+                key={action.id}
+                onClick={action.action}
+                className={`study-card cursor-pointer transition-all hover:shadow-lg ${
+                  action.highlight ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center`}>
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground">{action.title}</h3>
+                      <p className="text-sm text-muted-foreground">{action.description}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent Activity - Only show if data exists */}
+      {analytics?.overview && (
+        <Card className="study-card">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">Recent Insights</h3>
+            <div className="space-y-3">
+              {analytics.insights?.slice(0, 3).map((insight: string, index: number) => (
+                <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2" />
+                  <p className="text-sm text-foreground">{insight}</p>
+                </div>
+              )) || (
+                <p className="text-muted-foreground text-sm">
+                  Complete some study sessions to see insights here.
+                </p>
+              )}
             </div>
           </div>
         </Card>
+      )}
 
-        <Card className="study-card text-center hover:shadow-md transition-shadow">
-          <div className="space-y-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center mx-auto">
-              <Award className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{stats.totalXP}</p>
-              <p className="text-xs text-muted-foreground">Total XP</p>
-            </div>
-          </div>
+      {/* Empty State for new users */}
+      {!analytics?.overview && (
+        <Card className="study-card">
+          <EmptyState
+            title="Welcome to StudySprint!"
+            description="Start by creating your first topic or uploading a PDF to begin your study journey."
+            icon={<GraduationCap className="h-12 w-12" />}
+            action={{
+              label: "Get Started",
+              onClick: () => navigate('/topics')
+            }}
+          />
         </Card>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="study-card">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Quick Actions</h3>
-              
-              <div className="space-y-3">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <div
-                      key={action.id}
-                      onClick={action.action}
-                      className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                        action.highlight ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center`}>
-                          <Icon className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-foreground">{action.title}</h4>
-                            {action.urgent && (
-                              <AlertCircle className="h-4 w-4 text-destructive" />
-                            )}
-                            {action.count && (
-                              <Badge variant="outline" className="text-xs">
-                                {action.count}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{action.description}</p>
-                          {action.progress && (
-                            <div className="mt-2">
-                              <Progress value={action.progress} className="h-1" />
-                              <p className="text-xs text-muted-foreground mt-1">{action.timeLeft}</p>
-                            </div>
-                          )}
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
-
-          {/* Upcoming Tasks */}
-          <Card className="study-card">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Upcoming</h3>
-                <Button variant="outline" size="sm">View All</Button>
-              </div>
-              
-              <div className="space-y-3">
-                {upcomingTasks.map((task) => {
-                  const Icon = getTypeIcon(task.type);
-                  return (
-                    <div
-                      key={task.id}
-                      className={`p-3 rounded-lg border-l-4 ${getPriorityColor(task.priority)}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Icon className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-foreground">{task.title}</h4>
-                          <p className="text-xs text-muted-foreground">{task.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Due: {task.dueDate}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Activity Feed & Progress */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Weekly Progress */}
-          <Card className="study-card">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Weekly Progress</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4 text-success" />
-                  <span>+12% from last week</span>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    {weeklyProgress.currentHours}h / {weeklyProgress.studyGoal}h
-                  </span>
-                  <span className="text-sm font-medium text-foreground">
-                    {Math.round(progressPercentage)}% complete
-                  </span>
-                </div>
-                <Progress value={progressPercentage} className="w-full h-3" />
-                
-                <div className="grid grid-cols-7 gap-2">
-                  {weeklyProgress.dailyGoals.map((day, index) => (
-                    <div key={index} className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1">{day.day}</div>
-                      <div className={`w-full h-8 rounded flex items-center justify-center text-xs font-medium ${
-                        day.completed 
-                          ? 'bg-success text-success-foreground' 
-                          : day.actual > 0 
-                          ? 'bg-warning text-warning-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {day.actual}h
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Enhanced Recent Activity */}
-          <Card className="study-card">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-                <Button variant="outline" size="sm">View All</Button>
-              </div>
-              
-              <div className="space-y-3">
-                {recentActivity.map((activity) => {
-                  const Icon = activity.icon;
-                  return (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors">
-                      <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-secondary ${activity.iconColor}`}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground">{activity.title}</p>
-                          {activity.xp && (
-                            <Badge variant="outline" className="text-xs">
-                              +{activity.xp} XP
-                            </Badge>
-                          )}
-                        </div>
-                        {activity.description && (
-                          <p className="text-xs text-muted-foreground">{activity.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
-                          {activity.badge && (
-                            <Badge variant="outline" className={`text-xs ${activity.badgeColor} text-white`}>
-                              {activity.badge}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

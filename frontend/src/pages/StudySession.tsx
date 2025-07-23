@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { EmptyState } from '@/components/common/EmptyState';
 import { 
   Play, 
   Pause, 
@@ -17,180 +19,94 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
-
-interface StudySessionState {
-  isActive: boolean;
-  isPaused: boolean;
-  sessionTime: number; // in seconds
-  breakTime: number;
-  isBreak: boolean;
-  sessionType: 'pomodoro' | 'custom' | 'unlimited';
-  focusScore: number;
-  currentTopic: string;
-  targetDuration: number; // in minutes
-  pomodoroConfig: {
-    workMinutes: number;
-    shortBreakMinutes: number;
-    longBreakMinutes: number;
-    cyclesUntilLongBreak: number;
-    currentCycle: number;
-  };
-}
+import { useCurrentSession, useStartSession, useEndSession, usePauseSession, useResumeSession } from '@/hooks/useApi';
+import { useTimer } from '@/hooks/useTimer';
 
 const StudySession = () => {
-  const [session, setSession] = useState<StudySessionState>({
-    isActive: false,
-    isPaused: false,
-    sessionTime: 0,
-    breakTime: 0,
-    isBreak: false,
-    sessionType: 'pomodoro',
-    focusScore: 85,
-    currentTopic: 'Advanced Calculus',
-    targetDuration: 120, // 2 hours
-    pomodoroConfig: {
-      workMinutes: 25,
-      shortBreakMinutes: 5,
-      longBreakMinutes: 15,
-      cyclesUntilLongBreak: 4,
-      currentCycle: 1
-    }
+  const [sessionConfig, setSessionConfig] = useState({
+    type: 'pomodoro' as 'pomodoro' | 'custom' | 'unlimited',
+    workMinutes: 25,
+    shortBreakMinutes: 5,
+    longBreakMinutes: 15,
+    targetDuration: 120
   });
 
-  const [showSettings, setShowSettings] = useState(false);
+  const { data: currentSession, isLoading: sessionLoading, refetch } = useCurrentSession();
+  const startSessionMutation = useStartSession();
+  const endSessionMutation = useEndSession();
+  const pauseSessionMutation = usePauseSession();
+  const resumeSessionMutation = useResumeSession();
 
-  // Timer effect
+  const { time, isRunning, start, pause, stop, reset, formatTime } = useTimer();
+
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (session.isActive && !session.isPaused) {
-      interval = setInterval(() => {
-        setSession(prev => ({
-          ...prev,
-          sessionTime: prev.isBreak ? prev.sessionTime : prev.sessionTime + 1,
-          breakTime: prev.isBreak ? prev.breakTime + 1 : prev.breakTime
-        }));
-      }, 1000);
+    if (currentSession?.is_active && !isRunning) {
+      // Sync timer with active session
+      const sessionDuration = Math.floor(currentSession.duration_seconds);
+      reset();
+      // Note: You might want to set the initial time based on session duration
+      start();
     }
+  }, [currentSession, isRunning, start, reset]);
 
-    return () => clearInterval(interval);
-  }, [session.isActive, session.isPaused]);
+  const handleStartSession = async (type: 'pomodoro' | 'custom' | 'unlimited') => {
+    try {
+      await startSessionMutation.mutateAsync({
+        session_type: type,
+        planned_duration_minutes: type === 'pomodoro' ? sessionConfig.workMinutes : sessionConfig.targetDuration,
+        session_name: `${type.charAt(0).toUpperCase() + type.slice(1)} Session`
+      });
+      start();
+      refetch();
+    } catch (error) {
+      console.error('Failed to start session:', error);
+    }
+  };
 
-  // Pomodoro timer logic
-  useEffect(() => {
-    if (session.sessionType === 'pomodoro' && session.isActive && !session.isPaused) {
-      const { workMinutes, shortBreakMinutes, longBreakMinutes, cyclesUntilLongBreak, currentCycle } = session.pomodoroConfig;
-      
-      if (!session.isBreak) {
-        // Work session
-        if (session.sessionTime >= workMinutes * 60) {
-          // Time for break
-          const isLongBreak = currentCycle % cyclesUntilLongBreak === 0;
-          setSession(prev => ({
-            ...prev,
-            isBreak: true,
-            breakTime: 0,
-            sessionTime: 0
-          }));
-          // You could add notification/sound here
-        }
+  const handlePauseResume = async () => {
+    if (!currentSession) return;
+
+    try {
+      if (isRunning) {
+        await pauseSessionMutation.mutateAsync(currentSession.id);
+        pause();
       } else {
-        // Break session
-        const breakDuration = (session.pomodoroConfig.currentCycle % cyclesUntilLongBreak === 0) 
-          ? longBreakMinutes : shortBreakMinutes;
-        
-        if (session.breakTime >= breakDuration * 60) {
-          // Break over, start new work session
-          setSession(prev => ({
-            ...prev,
-            isBreak: false,
-            sessionTime: 0,
-            breakTime: 0,
-            pomodoroConfig: {
-              ...prev.pomodoroConfig,
-              currentCycle: prev.pomodoroConfig.currentCycle + 1
-            }
-          }));
+        await resumeSessionMutation.mutateAsync(currentSession.id);
+        start();
+      }
+      refetch();
+    } catch (error) {
+      console.error('Failed to pause/resume session:', error);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!currentSession) return;
+
+    try {
+      await endSessionMutation.mutateAsync({
+        id: currentSession.id,
+        data: {
+          notes: 'Session completed'
         }
-      }
-    }
-  }, [session.sessionTime, session.breakTime, session.sessionType, session.isActive, session.isPaused, session.isBreak]);
-
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getProgressPercentage = () => {
-    if (session.sessionType === 'pomodoro') {
-      if (session.isBreak) {
-        const { shortBreakMinutes, longBreakMinutes, cyclesUntilLongBreak, currentCycle } = session.pomodoroConfig;
-        const breakDuration = (currentCycle % cyclesUntilLongBreak === 0) ? longBreakMinutes : shortBreakMinutes;
-        return Math.min((session.breakTime / (breakDuration * 60)) * 100, 100);
-      } else {
-        return Math.min((session.sessionTime / (session.pomodoroConfig.workMinutes * 60)) * 100, 100);
-      }
-    } else {
-      const sessionMinutes = session.sessionTime / 60;
-      return Math.min((sessionMinutes / session.targetDuration) * 100, 100);
+      });
+      stop();
+      refetch();
+    } catch (error) {
+      console.error('Failed to end session:', error);
     }
   };
 
-  const handleStart = () => {
-    setSession(prev => ({ ...prev, isActive: true, isPaused: false }));
-  };
+  if (sessionLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-96">
+        <LoadingSpinner size="lg" text="Loading session..." />
+      </div>
+    );
+  }
 
-  const handlePause = () => {
-    setSession(prev => ({ ...prev, isPaused: true }));
-  };
-
-  const handleResume = () => {
-    setSession(prev => ({ ...prev, isPaused: false }));
-  };
-
-  const handleStop = () => {
-    setSession(prev => ({
-      ...prev,
-      isActive: false,
-      isPaused: false,
-      sessionTime: 0,
-      breakTime: 0,
-      isBreak: false,
-      pomodoroConfig: {
-        ...prev.pomodoroConfig,
-        currentCycle: 1
-      }
-    }));
-  };
-
-  const handleSkipBreak = () => {
-    setSession(prev => ({
-      ...prev,
-      isBreak: false,
-      breakTime: 0,
-      sessionTime: 0
-    }));
-  };
-
-  const startSession = (type: 'pomodoro' | 'custom' | 'unlimited') => {
-    setSession(prev => ({
-      ...prev,
-      sessionType: type,
-      isActive: true,
-      isPaused: false,
-      sessionTime: 0,
-      breakTime: 0,
-      isBreak: false
-    }));
-  };
-
-  if (!session.isActive) {
+  // No active session - show session selection
+  if (!currentSession?.is_active) {
     return (
       <div className="p-6 space-y-6">
         <div className="text-center space-y-4">
@@ -202,39 +118,63 @@ const StudySession = () => {
 
         {/* Session Type Selection */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <Card className="study-card cursor-pointer hover:shadow-lg" onClick={() => startSession('pomodoro')}>
+          <Card 
+            className="study-card cursor-pointer hover:shadow-lg transition-all" 
+            onClick={() => handleStartSession('pomodoro')}
+          >
             <div className="space-y-4 text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                 <Clock className="h-8 w-8 text-primary" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-foreground">Pomodoro Timer</h3>
-                <p className="text-sm text-muted-foreground">25min work + 5min break cycles</p>
+                <p className="text-sm text-muted-foreground">
+                  {sessionConfig.workMinutes}min work + {sessionConfig.shortBreakMinutes}min break cycles
+                </p>
               </div>
-              <Button className="w-full">
-                <Play className="h-4 w-4 mr-2" />
+              <Button 
+                className="w-full"
+                disabled={startSessionMutation.isPending}
+              >
+                {startSessionMutation.isPending ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Play className="h-4 w-4 mr-2" />
+                )}
                 Start Pomodoro
               </Button>
             </div>
           </Card>
 
-          <Card className="study-card cursor-pointer hover:shadow-lg" onClick={() => startSession('custom')}>
+          <Card 
+            className="study-card cursor-pointer hover:shadow-lg transition-all" 
+            onClick={() => handleStartSession('custom')}
+          >
             <div className="space-y-4 text-center">
               <div className="w-16 h-16 bg-focus/10 rounded-full flex items-center justify-center mx-auto">
                 <Target className="h-8 w-8 text-focus" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-foreground">Custom Timer</h3>
-                <p className="text-sm text-muted-foreground">Set your own duration and breaks</p>
+                <p className="text-sm text-muted-foreground">
+                  {Math.round(sessionConfig.targetDuration / 60)}h custom session
+                </p>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                disabled={startSessionMutation.isPending}
+              >
                 <Settings className="h-4 w-4 mr-2" />
-                Customize
+                Customize & Start
               </Button>
             </div>
           </Card>
 
-          <Card className="study-card cursor-pointer hover:shadow-lg" onClick={() => startSession('unlimited')}>
+          <Card 
+            className="study-card cursor-pointer hover:shadow-lg transition-all" 
+            onClick={() => handleStartSession('unlimited')}
+          >
             <div className="space-y-4 text-center">
               <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
                 <BookOpen className="h-8 w-8 text-success" />
@@ -243,7 +183,11 @@ const StudySession = () => {
                 <h3 className="text-xl font-semibold text-foreground">Free Study</h3>
                 <p className="text-sm text-muted-foreground">No timer, just track your progress</p>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                disabled={startSessionMutation.isPending}
+              >
                 <Play className="h-4 w-4 mr-2" />
                 Start Free Study
               </Button>
@@ -251,56 +195,67 @@ const StudySession = () => {
           </Card>
         </div>
 
-        {/* Current Topic Selection */}
-        <div className="max-w-md mx-auto">
-          <Card className="study-card">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Current Topic</h3>
-              <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
-                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{session.currentTopic}</p>
-                  <p className="text-sm text-muted-foreground">Last studied: 2 hours ago</p>
-                </div>
+        {/* Configuration Options */}
+        <Card className="study-card max-w-md mx-auto">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">Session Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-foreground">Work Duration</label>
+                <input
+                  type="number"
+                  value={sessionConfig.workMinutes}
+                  onChange={(e) => setSessionConfig(prev => ({ ...prev, workMinutes: parseInt(e.target.value) || 25 }))}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
+                  min="5"
+                  max="60"
+                />
               </div>
-              <Button variant="outline" className="w-full">
-                Change Topic
-              </Button>
+              <div>
+                <label className="text-sm font-medium text-foreground">Break Duration</label>
+                <input
+                  type="number"
+                  value={sessionConfig.shortBreakMinutes}
+                  onChange={(e) => setSessionConfig(prev => ({ ...prev, shortBreakMinutes: parseInt(e.target.value) || 5 }))}
+                  className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
+                  min="1"
+                  max="30"
+                />
+              </div>
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
     );
   }
+
+  // Active session - show timer interface
+  const getProgressPercentage = () => {
+    if (!currentSession) return 0;
+    const elapsed = time;
+    const planned = currentSession.planned_duration_minutes * 60;
+    return Math.min((elapsed / planned) * 100, 100);
+  };
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2">
-          <Badge variant="secondary" className={`${session.isBreak ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
-            {session.isBreak ? 'Break Time' : 'Study Session'}
+          <Badge variant="secondary" className="bg-success/10 text-success">
+            {currentSession.session_type.charAt(0).toUpperCase() + currentSession.session_type.slice(1)} Session
           </Badge>
-          {session.sessionType === 'pomodoro' && (
+          {currentSession.session_type === 'pomodoro' && (
             <Badge variant="outline">
-              Cycle {session.pomodoroConfig.currentCycle}
+              Cycle 1
             </Badge>
           )}
         </div>
         <h1 className="text-2xl font-bold text-foreground">
-          {session.isBreak ? 'Take a Break' : session.currentTopic}
+          {currentSession.session_name || 'Study Session'}
         </h1>
         <p className="text-muted-foreground">
-          {session.sessionType === 'pomodoro' && session.isBreak 
-            ? (session.pomodoroConfig.currentCycle % session.pomodoroConfig.cyclesUntilLongBreak === 0 
-               ? `Long break: ${session.pomodoroConfig.longBreakMinutes} minutes`
-               : `Short break: ${session.pomodoroConfig.shortBreakMinutes} minutes`)
-            : session.sessionType === 'pomodoro' 
-            ? `Work session: ${session.pomodoroConfig.workMinutes} minutes`
-            : 'Focus on your studies'
-          }
+          Stay focused and track your progress
         </p>
       </div>
 
@@ -310,59 +265,50 @@ const StudySession = () => {
           <div className="text-center space-y-6">
             {/* Timer Display */}
             <div className="space-y-4">
-              <div className={`text-6xl font-mono font-bold ${
-                session.isBreak ? 'text-warning' : 'text-focus'
-              }`}>
-                {formatTime(session.isBreak ? session.breakTime : session.sessionTime)}
+              <div className="text-6xl font-mono font-bold text-focus">
+                {formatTime()}
               </div>
-              <Progress value={getProgressPercentage()} className={`w-full h-3 ${
-                session.isBreak ? '[&>div]:bg-warning' : '[&>div]:bg-focus'
-              }`} />
+              <Progress value={getProgressPercentage()} className="w-full h-3" />
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>
-                  {session.sessionType === 'pomodoro' 
-                    ? (session.isBreak 
-                       ? `Break ${Math.floor(session.breakTime / 60)}/${
-                           session.pomodoroConfig.currentCycle % session.pomodoroConfig.cyclesUntilLongBreak === 0 
-                           ? session.pomodoroConfig.longBreakMinutes 
-                           : session.pomodoroConfig.shortBreakMinutes
-                         } min`
-                       : `Work ${Math.floor(session.sessionTime / 60)}/${session.pomodoroConfig.workMinutes} min`)
-                    : `${Math.round(session.sessionTime / 60)} / ${session.targetDuration} minutes`
-                  }
-                </span>
+                <span>{Math.floor(time / 60)} / {currentSession.planned_duration_minutes} min</span>
                 <span>{Math.round(getProgressPercentage())}% complete</span>
               </div>
             </div>
 
             {/* Controls */}
             <div className="flex items-center justify-center gap-4">
-              {session.isPaused ? (
-                <Button onClick={handleResume} className="gradient-primary text-white" size="lg">
-                  <Play className="h-5 w-5 mr-2" />
-                  Resume
-                </Button>
-              ) : (
-                <Button onClick={handlePause} variant="outline" size="lg">
+              <Button 
+                onClick={handlePauseResume} 
+                className={isRunning ? "bg-warning hover:bg-warning/90" : "gradient-primary"} 
+                size="lg"
+                disabled={pauseSessionMutation.isPending || resumeSessionMutation.isPending}
+              >
+                {pauseSessionMutation.isPending || resumeSessionMutation.isPending ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : isRunning ? (
                   <Pause className="h-5 w-5 mr-2" />
-                  Pause
-                </Button>
-              )}
+                ) : (
+                  <Play className="h-5 w-5 mr-2" />
+                )}
+                {isRunning ? 'Pause' : 'Resume'}
+              </Button>
               
-              {session.isBreak ? (
-                <Button onClick={handleSkipBreak} variant="outline" size="lg">
-                  <RotateCcw className="h-5 w-5 mr-2" />
-                  Skip Break
-                </Button>
-              ) : (
-                <Button variant="outline" size="lg">
-                  <Coffee className="h-5 w-5 mr-2" />
-                  Take Break
-                </Button>
-              )}
+              <Button variant="outline" size="lg">
+                <Coffee className="h-5 w-5 mr-2" />
+                Break
+              </Button>
               
-              <Button onClick={handleStop} variant="destructive" size="lg">
-                <Square className="h-5 w-5 mr-2" />
+              <Button 
+                onClick={handleEndSession} 
+                variant="destructive" 
+                size="lg"
+                disabled={endSessionMutation.isPending}
+              >
+                {endSessionMutation.isPending ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Square className="h-5 w-5 mr-2" />
+                )}
                 End Session
               </Button>
             </div>
@@ -378,7 +324,7 @@ const StudySession = () => {
               <Brain className="h-6 w-6 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground">Focus Score</p>
-            <p className="text-2xl font-bold text-foreground">{session.focusScore}%</p>
+            <p className="text-2xl font-bold text-foreground">{currentSession.focus_score || 0}%</p>
           </div>
         </Card>
 
@@ -388,7 +334,7 @@ const StudySession = () => {
               <Target className="h-6 w-6 text-focus" />
             </div>
             <p className="text-sm text-muted-foreground">Pages Read</p>
-            <p className="text-2xl font-bold text-foreground">12</p>
+            <p className="text-2xl font-bold text-foreground">{currentSession.pages_visited || 0}</p>
           </div>
         </Card>
 
@@ -398,7 +344,7 @@ const StudySession = () => {
               <TrendingUp className="h-6 w-6 text-success" />
             </div>
             <p className="text-sm text-muted-foreground">Productivity</p>
-            <p className="text-2xl font-bold text-foreground">High</p>
+            <p className="text-2xl font-bold text-foreground">{currentSession.productivity_score || 0}%</p>
           </div>
         </Card>
 
@@ -407,63 +353,29 @@ const StudySession = () => {
             <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center mx-auto">
               <Clock className="h-6 w-6 text-warning" />
             </div>
-            <p className="text-sm text-muted-foreground">Total Time</p>
+            <p className="text-sm text-muted-foreground">Active Time</p>
             <p className="text-2xl font-bold text-foreground">
-              {formatTime(session.sessionTime + session.breakTime)}
+              {Math.round(currentSession.active_minutes || 0)}m
             </p>
           </div>
         </Card>
       </div>
 
-      {/* Quick Tips */}
-      {session.isBreak && (
-        <div className="max-w-2xl mx-auto">
-          <Card className="study-card bg-warning/5 border-warning/20">
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-foreground">Break Time Tips</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Step away from your study area</li>
-                <li>• Do some light stretching or movement</li>
-                <li>• Hydrate and have a healthy snack</li>
-                <li>• Avoid screens if possible</li>
-                <li>• Take deep breaths and relax</li>
-              </ul>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Pomodoro Progress */}
-      {session.sessionType === 'pomodoro' && (
+      {/* Session Info */}
+      {currentSession.session_type === 'pomodoro' && (
         <div className="max-w-2xl mx-auto">
           <Card className="study-card">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-foreground">Pomodoro Progress</h3>
               <div className="flex items-center gap-2">
-                {Array.from({ length: session.pomodoroConfig.cyclesUntilLongBreak }, (_, i) => {
-                  const cycleNumber = i + 1;
-                  const isCompleted = cycleNumber < session.pomodoroConfig.currentCycle;
-                  const isCurrent = cycleNumber === session.pomodoroConfig.currentCycle;
-                  
-                  return (
-                    <div
-                      key={i}
-                      className={`flex-1 h-3 rounded-full ${
-                        isCompleted 
-                          ? 'bg-success' 
-                          : isCurrent 
-                          ? 'bg-primary' 
-                          : 'bg-muted'
-                      }`}
-                    />
-                  );
-                })}
+                <div className="flex-1 h-3 rounded-full bg-primary" />
+                <div className="flex-1 h-3 rounded-full bg-muted" />
+                <div className="flex-1 h-3 rounded-full bg-muted" />
+                <div className="flex-1 h-3 rounded-full bg-muted" />
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Cycle {session.pomodoroConfig.currentCycle}</span>
-                <span>
-                  {session.pomodoroConfig.cyclesUntilLongBreak - (session.pomodoroConfig.currentCycle - 1)} until long break
-                </span>
+                <span>Cycle 1 of 4</span>
+                <span>3 cycles until long break</span>
               </div>
             </div>
           </Card>

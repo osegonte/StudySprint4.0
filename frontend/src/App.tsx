@@ -1,154 +1,155 @@
 // src/App.tsx
-import React from "react";
+import React, { Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import { AppLayout } from "./components/layout/AppLayout";
-import Dashboard from "./pages/Dashboard";
-import Topics from "./pages/Topics";
-import PDFLibrary from "./pages/PDFLibrary";
-import StudySession from "./pages/StudySession";
-import Goals from "./pages/Goals";
-import Notes from "./pages/Notes";
-import Exercises from "./pages/Exercises";
-import Analytics from "./pages/Analytics";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
 
-// Create error boundary component
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error?: Error }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
+// Lazy load pages for better performance
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Topics = React.lazy(() => import("./pages/Topics"));
+const PDFLibrary = React.lazy(() => import("./pages/PDFLibrary"));
+const StudySession = React.lazy(() => import("./pages/StudySession"));
+const Goals = React.lazy(() => import("./pages/Goals"));
+const Notes = React.lazy(() => import("./pages/Notes"));
+const Exercises = React.lazy(() => import("./pages/Exercises"));
+const Analytics = React.lazy(() => import("./pages/Analytics"));
+const Settings = React.lazy(() => import("./pages/Settings"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('App Error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-center p-8">
-            <h1 className="text-2xl font-bold text-destructive mb-4">
-              Something went wrong
-            </h1>
-            <p className="text-muted-foreground mb-4">
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
-              Reload Page
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
+// Create React Query client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
       refetchOnWindowFocus: false,
-      retry: (failureCount, error) => {
-        console.error('Query failed:', error);
+      refetchOnReconnect: true,
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx errors (client errors)
+        if (error?.response?.status >= 400 && error?.response?.status < 500) {
+          return false;
+        }
+        // Retry up to 2 times for other errors
         return failureCount < 2;
       },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+    mutations: {
+      retry: 1,
+      retryDelay: 1000,
     },
   },
 });
 
-// Safe component wrapper
-const SafeComponent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  try {
-    return <>{children}</>;
-  } catch (error) {
-    console.error('Component render error:', error);
-    return (
-      <div className="p-4 text-center">
-        <p className="text-destructive">Failed to load component</p>
-      </div>
-    );
-  }
-};
+// Add global error handler for React Query
+queryClient.setMutationDefaults(['upload'], {
+  retry: false, // Don't retry file uploads
+});
 
-const App = () => {
+// Loading fallback component
+const PageLoadingFallback: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <LoadingSpinner size="lg" text="Loading..." />
+  </div>
+);
+
+// Route wrapper with error boundary for each page
+const RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<PageLoadingFallback />}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
+);
+
+const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <div className="min-h-screen bg-background text-foreground">
-            <Toaster position="top-right" richColors />
+            {/* Global toast notifications */}
+            <Toaster 
+              position="top-right" 
+              richColors 
+              expand={false}
+              duration={4000}
+              toastOptions={{
+                style: {
+                  background: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))', 
+                  color: 'hsl(var(--card-foreground))',
+                },
+              }}
+            />
+            
             <Routes>
+              {/* Main app routes with layout */}
               <Route path="/" element={
-                <SafeComponent>
+                <ErrorBoundary>
                   <AppLayout />
-                </SafeComponent>
+                </ErrorBoundary>
               }>
                 <Route index element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Dashboard />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="topics" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Topics />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="pdfs" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <PDFLibrary />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="study" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <StudySession />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="goals" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Goals />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="notes" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Notes />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="exercises" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Exercises />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="analytics" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Analytics />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
                 <Route path="settings" element={
-                  <SafeComponent>
+                  <RouteWrapper>
                     <Settings />
-                  </SafeComponent>
+                  </RouteWrapper>
                 } />
               </Route>
+
+              {/* Redirect common alternative paths */}
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/library" element={<Navigate to="/pdfs" replace />} />
+              <Route path="/session" element={<Navigate to="/study" replace />} />
+
+              {/* 404 catch-all */}
               <Route path="*" element={
-                <SafeComponent>
+                <RouteWrapper>
                   <NotFound />
-                </SafeComponent>
+                </RouteWrapper>
               } />
             </Routes>
           </div>

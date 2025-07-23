@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { 
   User, 
   Bell, 
@@ -16,8 +16,9 @@ import {
   Moon,
   Sun
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
-// Simple Switch component since we don't have it imported
+// Simple Switch component
 const Switch: React.FC<{
   id?: string;
   checked: boolean;
@@ -85,6 +86,9 @@ const TabsContent: React.FC<{ value: string; activeTab: string; children: React.
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+
   const [notifications, setNotifications] = useState({
     studyReminders: true,
     goalDeadlines: true,
@@ -93,10 +97,10 @@ const Settings = () => {
   });
 
   const [profile, setProfile] = useState({
-    name: 'Study User',
-    email: 'user@studysprint.com',
+    name: user?.name || 'Study User',
+    email: user?.email || 'user@studysprint.com',
     studyLevel: 'Intermediate',
-    timezone: 'UTC-5'
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
 
   const [privacy, setPrivacy] = useState({
@@ -104,6 +108,19 @@ const Settings = () => {
     dataCollection: true,
     analytics: true
   });
+
+  const handleSave = async (section: string) => {
+    setIsLoading(true);
+    try {
+      // TODO: Implement actual save functionality with backend
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      console.log(`Saving ${section} settings...`);
+    } catch (error) {
+      console.error(`Failed to save ${section} settings:`, error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -164,7 +181,18 @@ const Settings = () => {
                 <div>
                   <h3 className="text-xl font-semibold text-foreground">{profile.name}</h3>
                   <p className="text-muted-foreground">{profile.email}</p>
-                  <Badge variant="secondary" className="mt-1">Level 12 Scholar</Badge>
+                  {user?.level && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        Level {user.level}
+                      </span>
+                      {user?.xp && (
+                        <span className="text-xs text-muted-foreground">
+                          {user.xp} XP
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -188,11 +216,17 @@ const Settings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="level">Study Level</Label>
-                  <Input
+                  <select 
                     id="level"
                     value={profile.studyLevel}
                     onChange={(e) => setProfile({ ...profile, studyLevel: e.target.value })}
-                  />
+                    className="w-full p-2 border border-border rounded-md bg-background"
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Expert">Expert</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="timezone">Timezone</Label>
@@ -200,12 +234,19 @@ const Settings = () => {
                     id="timezone"
                     value={profile.timezone}
                     onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+                    readOnly
                   />
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <Button>Save Changes</Button>
+                <Button 
+                  onClick={() => handleSave('profile')}
+                  disabled={isLoading}
+                >
+                  {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+                  Save Changes
+                </Button>
                 <Button variant="outline">Cancel</Button>
               </div>
             </div>
@@ -278,7 +319,13 @@ const Settings = () => {
                 </div>
               </div>
 
-              <Button>Save Notification Settings</Button>
+              <Button 
+                onClick={() => handleSave('notifications')}
+                disabled={isLoading}
+              >
+                {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+                Save Notification Settings
+              </Button>
             </div>
           </Card>
         </TabsContent>
@@ -371,20 +418,20 @@ const Settings = () => {
                   <h4 className="font-medium text-foreground mb-2">Storage Usage</h4>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>PDFs</span>
-                      <span>2.1 GB</span>
+                      <span>Study Sessions</span>
+                      <span>--</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Notes</span>
-                      <span>45 MB</span>
+                      <span>--</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Session Data</span>
-                      <span>12 MB</span>
+                      <span>PDFs</span>
+                      <span>--</span>
                     </div>
                     <div className="border-t border-border pt-2 flex justify-between font-medium">
                       <span>Total</span>
-                      <span>2.16 GB</span>
+                      <span>Connect to backend to see usage</span>
                     </div>
                   </div>
                 </div>
@@ -464,11 +511,11 @@ const Settings = () => {
               <div className="pt-4 border-t border-border">
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>StudySprint Version</span>
-                  <Badge variant="outline">v4.0.1</Badge>
+                  <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs">v4.0.0</span>
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
                   <span>Last Updated</span>
-                  <span>January 20, 2024</span>
+                  <span>Connect to backend for version info</span>
                 </div>
               </div>
             </div>

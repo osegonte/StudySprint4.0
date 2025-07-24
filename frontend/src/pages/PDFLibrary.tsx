@@ -25,6 +25,8 @@ import {
   User
 } from 'lucide-react';
 import { usePDFs, useUploadPDF } from '@/hooks/useApi';
+import { useTopics } from '@/hooks/useApi';
+import { API, Topic } from '@/services/api';
 
 const PDFLibrary = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,12 +40,14 @@ const PDFLibrary = () => {
     page_size: 50
   });
   const uploadPDFMutation = useUploadPDF();
+  const { data: topics = [] } = useTopics();
+  const [selectedTopicId, setSelectedTopicId] = useState('');
 
   const pdfs = pdfData?.pdfs || [];
   const totalCount = pdfData?.total || 0;
 
   const filteredAndSortedPDFs = pdfs
-    .filter(pdf => {
+    .filter((pdf: any) => {
       const matchesFilter = filterBy === 'all' || 
                            (filterBy === 'completed' && pdf.is_completed) ||
                            (filterBy === 'in_progress' && !pdf.is_completed && pdf.reading_progress > 0) ||
@@ -52,7 +56,7 @@ const PDFLibrary = () => {
       
       return matchesFilter;
     })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       switch (sortBy) {
         case 'title': return a.title.localeCompare(b.title);
         case 'progress': return b.reading_progress - a.reading_progress;
@@ -108,11 +112,11 @@ const PDFLibrary = () => {
 
   const libraryStats = pdfs.length > 0 ? {
     totalPDFs: totalCount,
-    completedPDFs: pdfs.filter(pdf => pdf.is_completed).length,
-    totalPages: pdfs.reduce((sum, pdf) => sum + pdf.total_pages, 0),
-    pagesRead: pdfs.reduce((sum, pdf) => sum + pdf.current_page, 0),
-    totalStudyTime: pdfs.reduce((sum, pdf) => sum + pdf.actual_read_time_minutes, 0),
-    averageProgress: Math.round(pdfs.reduce((sum, pdf) => sum + pdf.reading_progress, 0) / pdfs.length)
+    completedPDFs: pdfs.filter((pdf: any) => pdf.is_completed).length,
+    totalPages: pdfs.reduce((sum: number, pdf: any) => sum + pdf.total_pages, 0),
+    pagesRead: pdfs.reduce((sum: number, pdf: any) => sum + pdf.current_page, 0),
+    totalStudyTime: pdfs.reduce((sum: number, pdf: any) => sum + pdf.actual_read_time_minutes, 0),
+    averageProgress: Math.round(pdfs.reduce((sum: number, pdf: any) => sum + pdf.reading_progress, 0) / pdfs.length)
   } : {
     totalPDFs: 0,
     completedPDFs: 0,
@@ -129,6 +133,7 @@ const PDFLibrary = () => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('title', file.name.replace(/\.[^/.]+$/, ''));
+    if (selectedTopicId) formData.append('topic_id', selectedTopicId);
 
     try {
       await uploadPDFMutation.mutateAsync({ formData });
@@ -172,25 +177,37 @@ const PDFLibrary = () => {
             Manage your study materials and track reading progress
           </p>
         </div>
-        <div className="relative">
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={handleFileUpload}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            disabled={uploadPDFMutation.isPending}
-          />
-          <Button 
-            className="gradient-primary text-white"
-            disabled={uploadPDFMutation.isPending}
+        <div className="flex gap-2 items-center">
+          <select
+            value={selectedTopicId}
+            onChange={e => setSelectedTopicId(e.target.value)}
+            className="p-2 border rounded text-sm"
           >
-            {uploadPDFMutation.isPending ? (
-              <LoadingSpinner size="sm" className="mr-2" />
-            ) : (
-              <Upload className="h-4 w-4 mr-2" />
-            )}
-            Upload PDF
-          </Button>
+            <option value="">Select Topic (optional)</option>
+            {topics.map((topic: Topic) => (
+              <option key={topic.id} value={topic.id}>{topic.name}</option>
+            ))}
+          </select>
+          <div className="relative">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileUpload as any}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              disabled={uploadPDFMutation.isPending}
+            />
+            <Button 
+              className="gradient-primary text-white"
+              disabled={uploadPDFMutation.isPending}
+            >
+              {uploadPDFMutation.isPending ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              Upload PDF
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -340,7 +357,7 @@ const PDFLibrary = () => {
       {filteredAndSortedPDFs.length > 0 ? (
         viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAndSortedPDFs.map((pdf) => (
+            {filteredAndSortedPDFs.map((pdf: any) => (
               <Card key={pdf.id} className="study-card group cursor-pointer hover:shadow-lg transition-all">
                 <div className="space-y-4">
                   {/* PDF Header */}
@@ -440,7 +457,7 @@ const PDFLibrary = () => {
         ) : (
           // List View
           <div className="space-y-3">
-            {filteredAndSortedPDFs.map((pdf) => (
+            {filteredAndSortedPDFs.map((pdf: any) => (
               <Card key={pdf.id} className="study-card">
                 <div className="flex items-center gap-4 p-4">
                   <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center relative">
@@ -524,7 +541,7 @@ const PDFLibrary = () => {
               const input = document.createElement('input');
               input.type = 'file';
               input.accept = '.pdf';
-              input.onchange = handleFileUpload;
+              input.onchange = handleFileUpload as any;
               input.click();
             }
           } : undefined}

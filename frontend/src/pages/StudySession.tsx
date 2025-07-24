@@ -19,8 +19,10 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
-import { useCurrentSession, useStartSession, useEndSession, usePauseSession, useResumeSession } from '@/hooks/useApi';
+import { useCurrentSession, useStartSession, useEndSession, usePauseSession, useResumeSession, useUpdateSession, usePDFs } from '@/hooks/useApi';
 import { useTimer } from '@/hooks/useTimer';
+import PDFViewer from './PDFViewer';
+import { PDF } from '@/services/api';
 
 const StudySession = () => {
   const [sessionConfig, setSessionConfig] = useState({
@@ -36,6 +38,11 @@ const StudySession = () => {
   const endSessionMutation = useEndSession();
   const pauseSessionMutation = usePauseSession();
   const resumeSessionMutation = useResumeSession();
+  const updateSessionMutation = useUpdateSession();
+  const { data: pdfData, isLoading: pdfsLoading } = usePDFs();
+  const pdfs = pdfData?.pdfs || [];
+  const [selectedPDFId, setSelectedPDFId] = useState<string>('');
+  const [selectedPDF, setSelectedPDF] = useState<PDF | null>(null);
 
   const { time, isRunning, start, pause, stop, reset, formatTime } = useTimer();
 
@@ -51,10 +58,13 @@ const StudySession = () => {
 
   const handleStartSession = async (type: 'pomodoro' | 'custom' | 'unlimited') => {
     try {
+      const pdf = pdfs.find((p: any) => p.id === selectedPDFId) || null;
+      setSelectedPDF(pdf);
       await startSessionMutation.mutateAsync({
         session_type: type,
         planned_duration_minutes: type === 'pomodoro' ? sessionConfig.workMinutes : sessionConfig.targetDuration,
-        session_name: `${type.charAt(0).toUpperCase() + type.slice(1)} Session`
+        session_name: `${type.charAt(0).toUpperCase() + type.slice(1)} Session`,
+        pdf_id: selectedPDFId
       });
       start();
       refetch();
@@ -96,6 +106,26 @@ const StudySession = () => {
       console.error('Failed to end session:', error);
     }
   };
+
+  const handlePageChange = (page: number) => {
+    if (currentSession) {
+      updateSessionMutation.mutate({
+        id: currentSession.id,
+        data: { current_page: page, pdf_id: currentSession.pdf_id }
+      });
+    }
+  };
+
+  const handleActivity = () => {
+    if (currentSession) {
+      updateSessionMutation.mutate({
+        id: currentSession.id,
+        data: { last_activity: new Date().toISOString() }
+      });
+    }
+  };
+
+  const getPDFUrl = (pdf: PDF) => `/api/pdf/${pdf.id}`;
 
   if (sessionLoading) {
     return (
@@ -223,6 +253,27 @@ const StudySession = () => {
                 />
               </div>
             </div>
+          </div>
+        </Card>
+
+        {/* PDF Selector */}
+        <Card className="study-card max-w-md mx-auto">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">Select PDF to Study</h3>
+            {pdfsLoading ? (
+              <LoadingSpinner size="sm" text="Loading PDFs..." />
+            ) : (
+              <select
+                className="w-full p-2 border border-border rounded-md bg-background"
+                value={selectedPDFId}
+                onChange={e => setSelectedPDFId(e.target.value)}
+              >
+                <option value="">-- Select a PDF --</option>
+                {pdfs.map((pdf: any) => (
+                  <option key={pdf.id} value={pdf.id}>{pdf.title}</option>
+                ))}
+              </select>
+            )}
           </div>
         </Card>
       </div>
@@ -379,6 +430,24 @@ const StudySession = () => {
               </div>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* PDF Viewer */}
+      {currentSession?.pdf_id && (
+        <div className="max-w-4xl mx-auto mt-6">
+          {selectedPDF ? (
+            <PDFViewer
+              fileUrl={getPDFUrl(selectedPDF)}
+              sessionId={currentSession.id}
+              pdfId={selectedPDF.id}
+              onPageChange={handlePageChange}
+              onActivity={handleActivity}
+              onEndSession={handleEndSession}
+            />
+          ) : (
+            <div className="text-muted-foreground">No PDF selected for this session.</div>
+          )}
         </div>
       )}
     </div>

@@ -183,6 +183,20 @@ export const useResumeSession = () => {
   });
 };
 
+export const useUpdateSession = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => API.sessions.updateSession(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CURRENT_SESSION] });
+      toast.success('Session updated');
+    },
+    onError: (error) => {
+      toast.error(handleApiError(error));
+    },
+  });
+};
+
 // Goals Hooks
 export const useGoals = (params?: any) => {
   return useQuery({
@@ -232,10 +246,10 @@ export const useCreateNote = () => {
 };
 
 // Exercises Hooks
-export const useExercisesAnalytics = () => {
+export const useExercisesAnalytics = (topicId?: string) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.ANALYTICS, 'exercises'],
-    queryFn: API.exercises.getAnalyticsOverview,
+    queryKey: [QUERY_KEYS.ANALYTICS, 'exercises', topicId],
+    queryFn: ({ queryKey }) => API.exercises.getAnalyticsOverview(queryKey[2]),
     staleTime: 2 * 60 * 1000,
   });
 };
@@ -254,5 +268,22 @@ export const useAnalyticsPerformance = (period: 'day' | 'week' | 'month' = 'week
     queryKey: [QUERY_KEYS.ANALYTICS, 'performance', period],
     queryFn: () => API.analytics.getPerformance(period),
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useAnalyticsRealTime = () => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.ANALYTICS, 'real-time'],
+    queryFn: API.analytics.getRealTime,
+    refetchInterval: 10000, // Refetch every 10 seconds for live updates
+    staleTime: 5000,
+  });
+};
+
+export const useAnalyticsInsights = (limit: number = 10) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.ANALYTICS, 'insights', limit],
+    queryFn: () => API.analytics.getInsights(limit),
+    staleTime: 2 * 60 * 1000,
   });
 };

@@ -16,7 +16,8 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from common.database import Base
 
 # Import models only - no services or schemas during migration
-from common.database import Topic, PDF
+from modules.topics.models import Topic
+from modules.pdfs.models import PDF
 
 # Import session models if they exist
 try:

@@ -17,7 +17,7 @@ import {
   BookOpen,
   Star
 } from 'lucide-react';
-import { useAnalyticsDashboard, useAnalyticsPerformance } from '@/hooks/useApi';
+import { useAnalyticsDashboard, useAnalyticsPerformance, useAnalyticsRealTime, useAnalyticsInsights } from '@/hooks/useApi';
 
 // Create a simple tabs implementation since we don't have it yet
 const TabsList: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
@@ -57,6 +57,8 @@ const Analytics = () => {
 
   const { data: analytics, isLoading, error } = useAnalyticsDashboard();
   const { data: performance } = useAnalyticsPerformance(timeRange as 'day' | 'week' | 'month');
+  const { data: realTime } = useAnalyticsRealTime();
+  const { data: insightsData } = useAnalyticsInsights(3);
 
   if (isLoading) {
     return (
@@ -360,8 +362,8 @@ const Analytics = () => {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-foreground">Recommendations</h3>
                     <div className="space-y-3">
-                      {analytics?.insights && analytics.insights.length > 0 ? (
-                        analytics.insights.slice(0, 3).map((insight: string, index: number) => (
+                      {insightsData?.insights && insightsData.insights.length > 0 ? (
+                        insightsData.insights.map((insight: string, index: number) => (
                           <div key={index} className="p-3 bg-primary/10 rounded-lg">
                             <p className="text-sm text-foreground">{insight}</p>
                           </div>

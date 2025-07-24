@@ -1,7 +1,7 @@
 // src/services/api.ts - Updated with proper data handling
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
 // Create axios instance with base configuration
 export const apiClient = axios.create({
@@ -453,6 +453,36 @@ export class AnalyticsAPI {
         performance_score: 0,
         insights: []
       };
+    }
+  }
+
+  static async getRealTime() {
+    try {
+      const response = await apiClient.get('/analytics/real-time');
+      return extractObjectData(response.data, {
+        timestamp: new Date().toISOString(),
+        active_session: { is_active: false, session_id: null, elapsed_minutes: 0 },
+        today_stats: { study_time_minutes: 0, focus_score: 0, pages_read: 0, goals_progress: 0, productivity_score: 0 },
+        live_insights: [],
+        quick_actions: []
+      });
+    } catch (error) {
+      return {
+        timestamp: new Date().toISOString(),
+        active_session: { is_active: false, session_id: null, elapsed_minutes: 0 },
+        today_stats: { study_time_minutes: 0, focus_score: 0, pages_read: 0, goals_progress: 0, productivity_score: 0 },
+        live_insights: [],
+        quick_actions: []
+      };
+    }
+  }
+
+  static async getInsights(limit: number = 10) {
+    try {
+      const response = await apiClient.get(`/analytics/insights?limit=${limit}`);
+      return extractObjectData(response.data, { insights: [], total_available: 0, generated_at: new Date().toISOString() });
+    } catch (error) {
+      return { insights: [], total_available: 0, generated_at: new Date().toISOString() };
     }
   }
 }

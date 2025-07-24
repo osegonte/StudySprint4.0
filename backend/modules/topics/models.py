@@ -23,3 +23,4 @@ class Topic(Base):
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    pdfs = relationship("PDF", back_populates="topic")

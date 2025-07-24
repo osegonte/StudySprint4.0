@@ -8,6 +8,11 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import logging
+from sqlalchemy import func
+from modules.sessions.models import StudySession
+from modules.pdfs.models import PDF
+from modules.topics.models import Topic
+from modules.goals.models import Goal
 
 logger = logging.getLogger(__name__)
 
@@ -20,96 +25,85 @@ class AnalyticsService:
     def get_dashboard_data(self) -> Dict[str, Any]:
         """Get comprehensive dashboard data"""
         
-        # Import goals data
-        try:
-            from modules.goals.services import goals_storage, achievements_storage
-            goals_data = list(goals_storage.values())
-            achievements = list(achievements_storage.values())
-        except:
-            goals_data = []
-            achievements = []
-        
-        # Study analytics (enhanced simulated data)
-        study_analytics = {
-            "total_study_time_minutes": 1450,
-            "total_sessions": 32,
-            "avg_focus_score": 84.7,
-            "productivity_score": 89.2,
-            "weekly_study_hours": [9.2, 10.1, 8.7, 11.5, 9.8, 10.3, 8.9],
-            "consistency_score": 87.5
-        }
-        
-        # Performance trends
-        performance_trends = {
-            "focus_trend": [78, 82, 84, 87, 85, 89, 91],
-            "productivity_trend": [82, 85, 88, 90, 87, 92, 89],
-            "goal_completion_trend": [45, 52, 58, 65, 71, 78, 85]
-        }
-        
+        # Study Sessions
+        total_study_time = self.db.query(func.sum(StudySession.total_minutes)).scalar() or 0
+        total_sessions = self.db.query(func.count(StudySession.id)).scalar() or 0
+        avg_focus_score = self.db.query(func.avg(StudySession.focus_score)).scalar() or 0
+        avg_productivity = self.db.query(func.avg(StudySession.productivity_score)).scalar() or 0
+        # Weekly study hours (last 7 days)
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        weekly_minutes = self.db.query(func.sum(StudySession.total_minutes)).filter(StudySession.start_time >= week_ago).scalar() or 0
+        weekly_study_hours = round(weekly_minutes / 60, 2)
+        # Consistency: days with sessions in last 7 days
+        days_with_sessions = self.db.query(func.date(StudySession.start_time)).filter(StudySession.start_time >= week_ago).distinct().count()
+        consistency_score = round((days_with_sessions / 7) * 100, 2)
+
+        # Goals
+        total_goals = self.db.query(func.count(Goal.id)).scalar() or 0
+        active_goals = self.db.query(func.count(Goal.id)).filter(Goal.status == 'active').scalar() or 0
+        completed_goals = self.db.query(func.count(Goal.id)).filter(Goal.status == 'completed').scalar() or 0
+        total_xp = self.db.query(func.sum(Goal.xp_reward)).scalar() or 0
+
+        # Achievements (placeholder: count completed goals as achievements)
+        total_achievements = completed_goals
+
+        # Quick stats (today)
+        today = datetime.utcnow().date()
+        today_minutes = self.db.query(func.sum(StudySession.total_minutes)).filter(func.date(StudySession.start_time) == today).scalar() or 0
+        today_goals_progress = self.db.query(func.count(Goal.id)).filter(Goal.status == 'completed', func.date(Goal.updated_at) == today).scalar() or 0
+        week_completion_rate = round((completed_goals / total_goals) * 100, 2) if total_goals else 0
+        current_streak = days_with_sessions
+
         return {
             "overview": {
                 "goals": {
-                    "total_goals": len(goals_data),
-                    "active_goals": len([g for g in goals_data if g["status"] == "active"]),
-                    "completed_goals": len([g for g in goals_data if g["status"] == "completed"]),
-                    "total_xp": sum(a["xp_reward"] for a in achievements)
+                    "total_goals": total_goals,
+                    "active_goals": active_goals,
+                    "completed_goals": completed_goals,
+                    "total_xp": total_xp
                 },
-                "study": study_analytics,
+                "study": {
+                    "total_study_time_minutes": total_study_time,
+                    "total_sessions": total_sessions,
+                    "avg_focus_score": round(avg_focus_score, 2),
+                    "productivity_score": round(avg_productivity, 2),
+                    "weekly_study_hours": [weekly_study_hours],
+                    "consistency_score": consistency_score
+                },
                 "achievements": {
-                    "total_earned": len(achievements),
-                    "total_xp": sum(a["xp_reward"] for a in achievements)
+                    "total_earned": total_achievements,
+                    "total_xp": total_xp
                 }
             },
-            "performance": performance_trends,
-            "insights": self._generate_dashboard_insights(goals_data, study_analytics),
+            "performance": {},  # Can be filled with more detailed trends if needed
+            "insights": [],     # Can be filled with more advanced logic
             "quick_stats": {
-                "today_study_time": 85,
-                "today_goals_progress": 2,
-                "week_completion_rate": 88,
-                "current_streak": 15
+                "today_study_time": today_minutes,
+                "today_goals_progress": today_goals_progress,
+                "week_completion_rate": week_completion_rate,
+                "current_streak": current_streak
             }
         }
     
     def get_performance_analytics(self, period: str = "week") -> Dict[str, Any]:
         """Get detailed performance analytics"""
         
+        now = datetime.utcnow()
         if period == "week":
-            time_data = {
-                "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-                "study_minutes": [95, 105, 85, 115, 98, 108, 82],
-                "focus_scores": [84, 87, 81, 90, 86, 92, 79],
-                "goals_progress": [2, 3, 1, 4, 2, 3, 1]
-            }
+            start = now - timedelta(days=7)
         elif period == "month":
-            time_data = {
-                "labels": [f"Week {i+1}" for i in range(4)],
-                "study_minutes": [650, 695, 620, 680],
-                "focus_scores": [83, 86, 89, 87],
-                "goals_progress": [12, 14, 11, 16]
-            }
+            start = now - timedelta(days=30)
         else:
-            time_data = {
-                "labels": [f"Day {i+1}" for i in range(7)],
-                "study_minutes": [85, 92, 78, 105, 88, 95, 77],
-                "focus_scores": [81, 84, 78, 88, 83, 87, 80],
-                "goals_progress": [1, 2, 1, 3, 2, 2, 1]
-            }
-        
-        current_avg = sum(time_data["study_minutes"]) / len(time_data["study_minutes"])
-        target_daily = 90
-        performance_score = (current_avg / target_daily) * 100
-        
+            start = now - timedelta(days=1)
+        sessions = self.db.query(StudySession).filter(StudySession.start_time >= start).all()
+        study_minutes = [s.total_minutes for s in sessions]
+        focus_scores = [float(s.focus_score or 0) for s in sessions]
         return {
             "period": period,
-            "time_data": time_data,
-            "performance_score": performance_score,
-            "productivity_metrics": {
-                "efficiency_score": 89.3,
-                "consistency_score": 85.7,
-                "focus_quality": 87.8,
-                "goal_alignment": 82.4
-            },
-            "insights": self._generate_performance_insights(performance_score)
+            "study_minutes": study_minutes,
+            "focus_scores": focus_scores,
+            "performance_score": round(sum(study_minutes) / len(study_minutes), 2) if study_minutes else 0,
+            "insights": []
         }
     
     def _generate_dashboard_insights(self, goals_data: List, study_analytics: Dict) -> List[str]:

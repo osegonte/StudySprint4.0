@@ -33,156 +33,128 @@ async def get_performance_analytics(
     return analytics_service.get_performance_analytics(period)
 
 @router.get("/real-time")
-async def get_real_time_metrics():
+async def get_real_time_metrics(
+    analytics_service: AnalyticsService = Depends(get_analytics_service)
+):
     """Get real-time study metrics and status"""
+    # Get today's stats
+    today = datetime.utcnow().date()
+    db = analytics_service.db
+    from modules.sessions.models import StudySession
+    from sqlalchemy import func
+    # Active session (most recent session that hasn't ended)
+    active_session = db.query(StudySession).filter(StudySession.end_time == None).order_by(StudySession.start_time.desc()).first()
+    is_active = bool(active_session)
+    session_id = str(active_session.id) if active_session else None
+    elapsed_minutes = 0
+    if active_session and active_session.start_time:
+        elapsed_minutes = int((datetime.utcnow() - active_session.start_time).total_seconds() // 60)
+    # Today's stats
+    today_stats = db.query(
+        func.sum(StudySession.total_minutes),
+        func.avg(StudySession.focus_score),
+        func.sum(StudySession.pages_read),
+        func.avg(StudySession.productivity_score)
+    ).filter(func.date(StudySession.start_time) == today).first()
+    study_time_minutes = today_stats[0] or 0
+    focus_score = round(today_stats[1] or 0, 2)
+    pages_read = today_stats[2] or 0
+    productivity_score = round(today_stats[3] or 0, 2)
+    # Goals progress today
+    from modules.goals.models import Goal
+    goals_progress = db.query(Goal).filter(Goal.status == 'completed', func.date(Goal.updated_at) == today).count()
+    # Generate live insights (simple example)
+    live_insights = []
+    if focus_score > 85:
+        live_insights.append("🧠 Excellent focus today!")
+    if goals_progress > 0:
+        live_insights.append(f"🏆 You've completed {goals_progress} goal milestone(s) today!")
+    if study_time_minutes > 120:
+        live_insights.append("💡 Consider a break for optimal performance.")
+    if not live_insights:
+        live_insights.append("✨ Keep going! Every minute counts.")
+    # Quick actions (static for now)
+    quick_actions = [
+        {"action": "Start study session", "url": "/sessions/start"},
+        {"action": "Update goal progress", "url": "/goals/"},
+        {"action": "Review achievements", "url": "/goals/achievements"}
+    ]
     return {
         "timestamp": datetime.utcnow().isoformat(),
         "active_session": {
-            "is_active": False,
-            "session_id": None,
-            "elapsed_minutes": 0
+            "is_active": is_active,
+            "session_id": session_id,
+            "elapsed_minutes": elapsed_minutes
         },
         "today_stats": {
-            "study_time_minutes": 85,
-            "focus_score": 87.3,
-            "pages_read": 22,
-            "goals_progress": 2,
-            "productivity_score": 89.7
+            "study_time_minutes": study_time_minutes,
+            "focus_score": focus_score,
+            "pages_read": pages_read,
+            "goals_progress": goals_progress,
+            "productivity_score": productivity_score
         },
-        "live_insights": [
-            "🎯 Great focus today! You're 12% above your average.",
-            "🏆 You've completed 2 goal milestones - excellent progress!",
-            "💡 Consider a 10-minute break soon for optimal performance."
-        ],
-        "quick_actions": [
-            {"action": "Start study session", "url": "/sessions/start"},
-            {"action": "Update goal progress", "url": "/goals/"},
-            {"action": "Review achievements", "url": "/goals/achievements"}
-        ]
+        "live_insights": live_insights,
+        "quick_actions": quick_actions
     }
 
 @router.get("/summary")
 async def get_analytics_summary(
-    period: str = Query("month", description="Summary period")
+    period: str = Query("month", description="Summary period"),
+    analytics_service: AnalyticsService = Depends(get_analytics_service)
 ):
     """Get analytics summary for specified period"""
-    
-    period_end = datetime.utcnow().date()
-    if period == "week":
-        period_start = period_end - timedelta(days=7)
-    elif period == "month":
-        period_start = period_end - timedelta(days=30)
-    else:
-        period_start = period_end - timedelta(days=365)
-    
-    return {
-        "period": period,
-        "period_start": period_start.isoformat(),
-        "period_end": period_end.isoformat(),
-        "study_summary": {
-            "total_study_time_minutes": 2150,
-            "total_sessions": 38,
-            "avg_session_duration": 56.6,
-            "total_pages_read": 520,
-            "avg_focus_score": 84.3,
-            "productivity_score": 87.8
-        },
-        "goals_summary": {
-            "goals_worked_on": 8,
-            "goals_completed": 4,
-            "milestones_achieved": 16,
-            "total_xp_earned": 950,
-            "completion_rate": 50.0
-        },
-        "performance_trends": {
-            "study_time_trend": "+15.3%",
-            "focus_improvement": "+8.2%",
-            "goal_completion": "+33.3%",
-            "consistency_score": 89.7
-        }
-    }
+    return analytics_service.get_performance_analytics(period)
 
 @router.get("/topics")
-async def get_topic_analytics():
+async def get_topic_analytics(
+    analytics_service: AnalyticsService = Depends(get_analytics_service)
+):
     """Get analytics broken down by topic/subject"""
-    return [
-        {
-            "topic_name": "Mathematics",
-            "study_time_minutes": 720,
-            "completion_percentage": 72.4,
-            "focus_score": 85.8,
-            "sessions_count": 16,
-            "pages_read": 180,
-            "trend": "improving"
-        },
-        {
-            "topic_name": "Physics", 
-            "study_time_minutes": 580,
-            "completion_percentage": 58.3,
-            "focus_score": 82.1,
-            "sessions_count": 13,
-            "pages_read": 145,
-            "trend": "stable"
-        },
-        {
-            "topic_name": "Chemistry",
-            "study_time_minutes": 420,
-            "completion_percentage": 41.7,
-            "focus_score": 79.4,
-            "sessions_count": 9,
-            "pages_read": 105,
-            "trend": "improving"
-        }
-    ]
+    # Example: Aggregate study time and progress by topic
+    db = analytics_service.db
+    from modules.topics.models import Topic
+    from modules.sessions.models import StudySession
+    from sqlalchemy import func
+    topics = db.query(Topic).all()
+    topic_stats = []
+    for topic in topics:
+        study_minutes = db.query(func.sum(StudySession.total_minutes)).filter(StudySession.topic_id == topic.id).scalar() or 0
+        sessions_count = db.query(func.count(StudySession.id)).filter(StudySession.topic_id == topic.id).scalar() or 0
+        focus_score = db.query(func.avg(StudySession.focus_score)).filter(StudySession.topic_id == topic.id).scalar() or 0
+        pages_read = 0  # Extend if you track pages per session
+        completion_percentage = topic.study_progress if hasattr(topic, 'study_progress') else 0
+        topic_stats.append({
+            "topic_id": str(topic.id),
+            "topic_name": topic.name,
+            "study_time_minutes": study_minutes,
+            "completion_percentage": completion_percentage,
+            "focus_score": round(focus_score, 2),
+            "sessions_count": sessions_count,
+            "pages_read": pages_read,
+            "trend": "improving"  # Placeholder, can be calculated
+        })
+    return topic_stats
 
 @router.get("/insights")
 async def get_analytics_insights(
     category: Optional[str] = Query(None, description="Filter by category"),
-    limit: int = Query(10, description="Maximum number of insights")
+    limit: int = Query(10, description="Maximum number of insights"),
+    analytics_service: AnalyticsService = Depends(get_analytics_service)
 ):
     """Get personalized analytics insights"""
-    
-    all_insights = [
-        {
-            "category": "performance",
-            "type": "positive",
-            "title": "Focus Improvement Trend",
-            "description": "Your focus scores have improved by 12.3% over the last two weeks",
-            "confidence": 0.89,
-            "action_items": [
-                "Continue your current study environment setup",
-                "Maintain consistent study times"
-            ]
-        },
-        {
-            "category": "goals",
-            "type": "achievement",
-            "title": "Goal Completion Streak",
-            "description": "You've completed 4 goals this month - your best performance yet!",
-            "action_items": [
-                "Celebrate this milestone achievement",
-                "Set even more ambitious goals"
-            ]
-        },
-        {
-            "category": "consistency",
-            "type": "positive", 
-            "title": "Study Streak Achievement",
-            "description": "22-day study streak! Consistency is building strong habits",
-            "streak_count": 22,
-            "action_items": [
-                "Keep the momentum going",
-                "Aim for the 30-day streak badge"
-            ]
-        }
-    ]
-    
-    if category:
-        all_insights = [i for i in all_insights if i["category"] == category]
-    
+    # Generate insights from dashboard and performance analytics
+    dashboard = analytics_service.get_dashboard_data()
+    goals_data = []
+    db = analytics_service.db
+    from modules.goals.models import Goal
+    goals = db.query(Goal).all()
+    for g in goals:
+        goals_data.append({"status": g.status})
+    study_analytics = dashboard["overview"]["study"]
+    insights = analytics_service._generate_dashboard_insights(goals_data, study_analytics)
     return {
-        "insights": all_insights[:limit],
-        "total_available": len(all_insights),
+        "insights": insights[:limit],
+        "total_available": len(insights),
         "generated_at": datetime.utcnow().isoformat()
     }
 

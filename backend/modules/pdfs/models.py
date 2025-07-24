@@ -5,13 +5,14 @@ SQLAlchemy models for PDF management and metadata
 """
 
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, ARRAY, DECIMAL
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy import DECIMAL
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from datetime import datetime
 from common.database import Base
-from common.database import PDF, Topic
+from modules.topics.models import Topic
 
 __all__ = ['PDF', 'Topic']
 
@@ -19,6 +20,7 @@ exercises = relationship("Exercise", back_populates="pdf")
 
 class PDF(Base):
     __tablename__ = "pdfs"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"))
@@ -46,13 +48,13 @@ class PDF(Base):
     author = Column(String(255))
     subject = Column(String(255))
     keywords = Column(ARRAY(String))
-    metadata = Column(JSON, default={})
+    pdf_metadata = Column(JSON, default={})
     ai_analysis = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    topic = relationship("Topic", back_populates="pdfs")
+    # topic = relationship("Topic", back_populates="pdfs")  # Temporarily commented out to resolve KeyError
     parent_pdf = relationship("PDF", remote_side=[id])
     child_pdfs = relationship("PDF", back_populates="parent_pdf")
     study_sessions = relationship("StudySession", back_populates="pdf")
@@ -207,8 +209,8 @@ class PDFSearchRequest(BaseModel):
     is_completed: Optional[bool] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
-    sort_by: str = Field("created_at", regex="^(title|created_at|updated_at|reading_progress|total_pages)$")
-    sort_order: str = Field("desc", regex="^(asc|desc)$")
+    sort_by: str = Field("created_at", pattern="^(title|created_at|updated_at|reading_progress|total_pages)$")
+    sort_order: str = Field("desc", pattern="^(asc|desc)$")
 
 
 class PDFUploadResponse(BaseModel):
@@ -241,7 +243,7 @@ class TopicBase(BaseModel):
     """Base schema for Topic"""
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    color: str = Field("#3498db", regex="^#[0-9A-Fa-f]{6}$")
+    color: str = Field("#3498db", pattern="^#[0-9A-Fa-f]{6}$")
     icon: str = Field("book", max_length=50)
     difficulty_level: int = Field(1, ge=1, le=5)
     priority_level: int = Field(1, ge=1, le=5)
@@ -256,7 +258,7 @@ class TopicUpdate(BaseModel):
     """Schema for updating topic"""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    color: Optional[str] = Field(None, regex="^#[0-9A-Fa-f]{6}$")
+    color: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
     icon: Optional[str] = Field(None, max_length=50)
     difficulty_level: Optional[int] = Field(None, ge=1, le=5)
     priority_level: Optional[int] = Field(None, ge=1, le=5)

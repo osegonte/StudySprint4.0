@@ -4,7 +4,7 @@ StudySprint 4.0 - Analytics Module Models
 Stage 6: Comprehensive analytics and insights across all modules
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey, DECIMAL, Date
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey, Date, DECIMAL
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 import uuid

@@ -1,6 +1,6 @@
 """
 StudySprint 4.0 - Alembic Environment Configuration
-Minimal imports for migration
+Week 1 - Simplified imports for Stage 1 modules only
 """
 
 from logging.config import fileConfig
@@ -10,22 +10,23 @@ from alembic import context
 import os
 import sys
 
-# Add the backend directory to the path
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Add the backend directory to the path (we're running from backend/)
+sys.path.append(os.path.dirname(__file__))
+sys.path.append('.')
 
 from common.database import Base
 
-# Import models only - no services or schemas during migration
+# Import only Stage 1 models (Week 1)
 from modules.topics.models import Topic
 from modules.pdfs.models import PDF
 
-# Import session models if they exist
+# Import session models for Stage 2 (ready for Week 2)
 try:
     from modules.sessions.models import StudySession, PageTime, PomodoroSession, ReadingSpeed, TimeEstimate
 except ImportError:
     pass
 
-# Import notes models only
+# Import notes models for Stage 4 (ready for Week 4)
 try:
     from modules.notes.models import Note, NoteLink, Highlight, Bookmark, NoteVersion, KnowledgeNode, KnowledgeEdge
 except ImportError:

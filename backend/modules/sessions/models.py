@@ -1,7 +1,7 @@
 # backend/modules/sessions/models.py
 """
-StudySprint 4.0 - Complete Study Sessions Models
-Final implementation with all advanced features
+StudySprint 4.0 - Study Sessions Models
+Fixed: Proper relationship definitions
 """
 
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey, DECIMAL
@@ -11,7 +11,6 @@ import uuid
 from datetime import datetime, timedelta
 from common.database import Base
 
-exercise_attempts = relationship("ExerciseAttempt", back_populates="session")
 
 class StudySession(Base):
     __tablename__ = "study_sessions"
@@ -61,6 +60,15 @@ class StudySession(Base):
     # Metadata
     session_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships - use string references
+    pdf = relationship("PDF", back_populates="study_sessions")
+    topic = relationship("Topic", back_populates="study_sessions")
+    page_times = relationship("PageTime", back_populates="session", cascade="all, delete-orphan")
+    pomodoro_sessions = relationship("PomodoroSession", back_populates="study_session", cascade="all, delete-orphan")
+    notes_created = relationship("Note", back_populates="session")
+    highlights_made = relationship("Highlight", back_populates="session")
+    bookmarks_added = relationship("Bookmark", back_populates="session")
 
     def __repr__(self):
         return f"<StudySession(id={self.id}, type='{self.session_type}', duration={self.total_minutes}min)>"
@@ -151,6 +159,10 @@ class PageTime(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
+    session = relationship("StudySession", back_populates="page_times")
+    pdf = relationship("PDF")
+
     def __repr__(self):
         return f"<PageTime(session={self.session_id}, page={self.page_number}, duration={self.duration_seconds}s)>"
 
@@ -187,6 +199,9 @@ class PomodoroSession(Base):
     xp_earned = Column(Integer, default=0)
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
+
+    # Relationships
+    study_session = relationship("StudySession", back_populates="pomodoro_sessions")
 
     def __repr__(self):
         return f"<PomodoroSession(cycle={self.cycle_number}, type='{self.cycle_type}', completed={self.completed})>"

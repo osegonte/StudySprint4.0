@@ -1,5 +1,4 @@
-# Create or replace modules/pdfs/routes.py with this simple version
-
+# backend/modules/pdfs/routes.py - Enhanced with health check
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 import logging
@@ -9,21 +8,29 @@ import uuid
 
 logger = logging.getLogger(__name__)
 
-# Use either name - this covers both import patterns
 router = APIRouter()
-pdfs_router = router  # Alias for compatibility
 
 # Ensure upload directory exists
 UPLOAD_DIR = Path("uploads/pdfs")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+@router.get("/health")
+async def pdfs_health():
+    """PDFs module health check"""
+    return {
+        "module": "pdfs",
+        "status": "✅ Working",
+        "stage": "Stage 1",
+        "week": "Week 1",
+        "upload_dir": str(UPLOAD_DIR),
+        "upload_dir_exists": UPLOAD_DIR.exists()
+    }
 
 @router.get("/")
 async def get_pdfs():
     """Get all PDFs"""
     try:
         logger.info("GET /pdfs/ called")
-        
-        # Return empty data in expected format
         return {
             "pdfs": [],
             "total": 0,
@@ -47,21 +54,22 @@ async def upload_pdf(
     """Upload PDF file with topic association"""
     try:
         logger.info(f"Upload started: {file.filename} (topic_id={topic_id})")
-        # Basic validation
+        
         if not file.filename:
             raise HTTPException(status_code=400, detail="No filename provided")
         if not file.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-        # Generate safe filename
+        
         file_id = str(uuid.uuid4())
         safe_filename = f"{file_id}.pdf"
         file_path = UPLOAD_DIR / safe_filename
-        # Save file
+        
         content = await file.read()
         with open(file_path, "wb") as f:
             f.write(content)
+        
         logger.info(f"File saved: {file_path} ({len(content)} bytes)")
-        # Return success response (include topic_id for now)
+        
         return {
             "id": file_id,
             "title": title or file.filename.replace('.pdf', ''),
@@ -91,7 +99,6 @@ async def upload_pdf(
 async def get_pdf(pdf_id: str):
     """Get specific PDF"""
     try:
-        # Return mock data for now
         return {
             "id": pdf_id,
             "title": f"PDF {pdf_id}",

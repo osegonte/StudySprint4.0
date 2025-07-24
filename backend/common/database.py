@@ -12,9 +12,10 @@ from sqlalchemy.sql import func
 import uuid
 from datetime import datetime
 import os
+from common.config import settings
 
 # Database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://osegonte@localhost:5432/studysprint4_local")
+DATABASE_URL = settings.DATABASE_URL
 
 # SQLAlchemy setup
 engine = create_engine(DATABASE_URL)

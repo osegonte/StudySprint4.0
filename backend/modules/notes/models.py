@@ -1,7 +1,7 @@
 # backend/modules/notes/models.py
 """
 StudySprint 4.0 - Notes Module Models
-Fixed: renamed metadata to note_metadata to avoid SQLAlchemy conflict
+Fixed: Proper relationships and imports
 """
 
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey, DECIMAL
@@ -57,6 +57,19 @@ class Note(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    pdf = relationship("PDF", back_populates="notes")
+    topic = relationship("Topic", back_populates="notes")
+    session = relationship("StudySession", back_populates="notes_created")
+    parent_note = relationship("Note", remote_side=[id])
+    child_notes = relationship("Note", back_populates="parent_note")
+    versions = relationship("NoteVersion", back_populates="note", cascade="all, delete-orphan")
+    source_links = relationship("NoteLink", foreign_keys="NoteLink.source_note_id", back_populates="source_note", cascade="all, delete-orphan")
+    target_links = relationship("NoteLink", foreign_keys="NoteLink.target_note_id", back_populates="target_note")
+
+    def __repr__(self):
+        return f"<Note(id={self.id}, title='{self.title[:30]}...')>"
+
 
 class NoteLink(Base):
     __tablename__ = "note_links"
@@ -79,6 +92,13 @@ class NoteLink(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    source_note = relationship("Note", foreign_keys=[source_note_id], back_populates="source_links")
+    target_note = relationship("Note", foreign_keys=[target_note_id], back_populates="target_links")
+
+    def __repr__(self):
+        return f"<NoteLink(source={self.source_note_id}, target={self.target_note_id})>"
 
 
 class Highlight(Base):
@@ -113,6 +133,14 @@ class Highlight(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    pdf = relationship("PDF", back_populates="highlights")
+    note = relationship("Note")
+    session = relationship("StudySession", back_populates="highlights_made")
+
+    def __repr__(self):
+        return f"<Highlight(pdf={self.pdf_id}, page={self.page_number})>"
+
 
 class Bookmark(Base):
     __tablename__ = "bookmarks"
@@ -136,6 +164,14 @@ class Bookmark(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
+    pdf = relationship("PDF", back_populates="bookmarks")
+    note = relationship("Note")
+    session = relationship("StudySession", back_populates="bookmarks_added")
+
+    def __repr__(self):
+        return f"<Bookmark(pdf={self.pdf_id}, page={self.page_number}, title='{self.title}')>"
+
 
 class NoteVersion(Base):
     __tablename__ = "note_versions"
@@ -153,41 +189,61 @@ class NoteVersion(Base):
     # Timestamp
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
+    note = relationship("Note", back_populates="versions")
+
+    def __repr__(self):
+        return f"<NoteVersion(note={self.note_id}, version={self.version_number})>"
+
 
 class KnowledgeNode(Base):
-    __tablename__ = "knowledge_nodes"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    node_type = Column(String(20), nullable=False)
-    entity_id = Column(UUID(as_uuid=True), nullable=False)
-    title = Column(String(255), nullable=False)
-    
-    # Graph metrics
-    centrality_score = Column(DECIMAL(5,4), default=0.0)
-    betweenness_score = Column(DECIMAL(5,4), default=0.0)
-    clustering_coefficient = Column(DECIMAL(5,4), default=0.0)
-    degree = Column(Integer, default=0)
-    community_id = Column(String(50))
-    importance_rank = Column(Integer)
-    
-    # Metadata
-    last_calculated = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
+   __tablename__ = "knowledge_nodes"
+   
+   id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+   node_type = Column(String(20), nullable=False)
+   entity_id = Column(UUID(as_uuid=True), nullable=False)
+   title = Column(String(255), nullable=False)
+   
+   # Graph metrics
+   centrality_score = Column(DECIMAL(5,4), default=0.0)
+   betweenness_score = Column(DECIMAL(5,4), default=0.0)
+   clustering_coefficient = Column(DECIMAL(5,4), default=0.0)
+   degree = Column(Integer, default=0)
+   community_id = Column(String(50))
+   importance_rank = Column(Integer)
+   
+   # Metadata
+   last_calculated = Column(DateTime)
+   created_at = Column(DateTime, default=datetime.utcnow)
+
+   # Relationships
+   outgoing_edges = relationship("KnowledgeEdge", foreign_keys="KnowledgeEdge.source_node_id", back_populates="source_node", cascade="all, delete-orphan")
+   incoming_edges = relationship("KnowledgeEdge", foreign_keys="KnowledgeEdge.target_node_id", back_populates="target_node")
+
+   def __repr__(self):
+       return f"<KnowledgeNode(type='{self.node_type}', title='{self.title}')>"
 
 
 class KnowledgeEdge(Base):
-    __tablename__ = "knowledge_edges"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_node_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"))
-    target_node_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"))
-    
-    # Edge properties
-    edge_type = Column(String(30), nullable=False)
-    weight = Column(DECIMAL(5,4), default=1.0)
-    strength = Column(DECIMAL(3,2), default=1.0)
-    context = Column(Text)
-    
-    # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+   __tablename__ = "knowledge_edges"
+   
+   id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+   source_node_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"))
+   target_node_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"))
+   
+   # Edge properties
+   edge_type = Column(String(30), nullable=False)
+   weight = Column(DECIMAL(5,4), default=1.0)
+   strength = Column(DECIMAL(3,2), default=1.0)
+   context = Column(Text)
+   
+   # Timestamps
+   created_at = Column(DateTime, default=datetime.utcnow)
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+   # Relationships
+   source_node = relationship("KnowledgeNode", foreign_keys=[source_node_id], back_populates="outgoing_edges")
+   target_node = relationship("KnowledgeNode", foreign_keys=[target_node_id], back_populates="incoming_edges")
+
+   def __repr__(self):
+       return f"<KnowledgeEdge(source={self.source_node_id}, target={self.target_node_id}, type='{self.edge_type}')>"

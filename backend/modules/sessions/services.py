@@ -501,7 +501,75 @@ class StudySessionService:
                       key=lambda x: statistics.mean(x[1]))[0]
         
         return best_env.replace('_', ' ').title()
-
+     
+    
+    def pause_session(self, session_id: UUID) -> StudySessionResponse:
+        """Enhanced pause with detailed break tracking"""
+        session = self.db.query(StudySession).filter(StudySession.id == session_id).first()
+        if not session:
+            raise ValueError(f"Session not found: {session_id}")
+    
+        if session.end_time:
+            raise ValueError("Cannot pause completed session")
+    
+        now = datetime.utcnow()
+    
+        # Calculate active time up to pause
+        if session.start_time:
+            elapsed_seconds = (now - session.start_time).total_seconds()
+            session.active_minutes = int((elapsed_seconds - session.break_minutes * 60) / 60)
+    
+        # Create break record
+        session_break = SessionBreak(
+            session_id=session_id,
+            break_start=now,
+            break_type="planned",
+            break_reason="user_initiated"
+        )
+        self.db.add(session_break)
+    
+        # Mark pause in session data
+        session_data = session.session_data or {}
+        session_data['paused_at'] = now.isoformat()
+        session_data['break_count'] = session_data.get('break_count', 0) + 1
+        session.session_data = session_data
+    
+        self.db.commit()
+        logger.info(f"Session paused with break tracking: {session_id}")
+        return self._to_response(session)
+    def resume_session(self, session_id: UUID) -> StudySessionResponse:
+        """Enhanced resume with break analytics"""
+        session = self.db.query(StudySession).filter(StudySession.id == session_id).first()
+        if not session:
+            raise ValueError(f"Session not found: {session_id}")
+    
+        now = datetime.utcnow()
+        session_data = session.session_data or {}
+    
+        if 'paused_at' in session_data:
+            pause_start = datetime.fromisoformat(session_data['paused_at'])
+            break_duration_minutes = (now - pause_start).total_seconds() / 60
+            session.break_minutes += int(break_duration_minutes)
+        
+            # Complete the break record
+            session_break = self.db.query(SessionBreak).filter(
+                and_(
+                    SessionBreak.session_id == session_id,
+                    SessionBreak.break_end.is_(None)
+                )
+            ).first()
+        
+            if session_break:
+                session_break.break_end = now
+                session_break.duration_minutes = int(break_duration_minutes)
+        
+            # Remove pause marker
+            del session_data['paused_at']
+            session.session_data = session_data
+    
+        self.db.commit()
+        logger.info(f"Session resumed after {break_duration_minutes:.1f} minute break")
+        return self._to_response(session)
 
 class PageTimeService:
     """Service for detailed page-level time tracking"""

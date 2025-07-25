@@ -1,7 +1,7 @@
 # backend/modules/sessions/models.py
 """
-StudySprint 4.0 - Study Sessions Models
-Fixed: Proper relationship definitions
+StudySprint 4.0 - Complete Study Sessions Models
+Week 2: Production-ready session tracking with comprehensive analytics
 """
 
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey, DECIMAL
@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime, timedelta
+from typing import List, Dict, Any
 from common.database import Base
 
 
@@ -61,14 +62,9 @@ class StudySession(Base):
     session_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships - use string references
-    pdf = relationship("PDF", back_populates="study_sessions")
-    topic = relationship("Topic", back_populates="study_sessions")
+    # Relationships - Fixed to avoid circular imports
     page_times = relationship("PageTime", back_populates="session", cascade="all, delete-orphan")
     pomodoro_sessions = relationship("PomodoroSession", back_populates="study_session", cascade="all, delete-orphan")
-    notes_created = relationship("Note", back_populates="session")
-    highlights_made = relationship("Highlight", back_populates="session")
-    bookmarks_added = relationship("Bookmark", back_populates="session")
 
     def __repr__(self):
         return f"<StudySession(id={self.id}, type='{self.session_type}', duration={self.total_minutes}min)>"
@@ -123,6 +119,125 @@ class StudySession(Base):
             quality_multiplier = 1 + (float(self.focus_score) / 100)
             self.xp_earned = int(base_xp * quality_multiplier)
 
+    def calculate_advanced_focus_score(self, activity_events=None, break_records=None):
+        """Advanced focus score calculation with multiple factors"""
+        if self.total_minutes == 0:
+            return 0.0
+    
+        # Base score from active time ratio
+        active_ratio = self.active_minutes / self.total_minutes if self.total_minutes > 0 else 0
+        base_score = active_ratio * 100
+    
+        # Activity consistency factor
+        consistency_bonus = 0.0
+        if activity_events and len(activity_events) > 0:
+            # Reward consistent activity distribution
+            time_gaps = []
+            for i in range(1, len(activity_events)):
+                gap = (activity_events[i].event_timestamp - activity_events[i-1].event_timestamp).total_seconds()
+                time_gaps.append(gap)
+        
+            if time_gaps:
+                avg_gap = sum(time_gaps) / len(time_gaps)
+                if 30 <= avg_gap <= 300:  # Optimal activity every 30 seconds to 5 minutes
+                    consistency_bonus = 10.0
+    
+        # Break quality factor
+        break_penalty = 0.0
+        if break_records:
+            total_break_time = sum(b.duration_minutes for b in break_records if b.duration_minutes)
+            if total_break_time > 0:
+               avg_break_duration = total_break_time / len(break_records)
+               # Penalty for very long breaks (>15 min) or too many short breaks (<2 min)
+               if avg_break_duration > 15:
+                   break_penalty = min(20, (avg_break_duration - 15) * 2)
+               elif avg_break_duration < 2:
+                   break_penalty = (2 - avg_break_duration) * 5
+    
+        # Interruption penalty
+        interruption_penalty = min(self.interruptions * 5, 25)
+    
+        # Pomodoro bonus
+        pomodoro_bonus = min(self.pomodoro_cycles * 3, 15)
+    
+        # Final calculation
+        focus_score = base_score + consistency_bonus + pomodoro_bonus - break_penalty - interruption_penalty
+        return max(0.0, min(100.0, focus_score))
+
+    def calculate_productivity_score(self):
+        """Calculate productivity based on output and efficiency"""
+        if self.total_minutes == 0:
+            return 0.0
+    
+        # Base productivity from pages completed
+        pages_score = min(50, self.pages_completed * 5) if self.pages_completed > 0 else 0
+    
+        # Efficiency score
+        efficiency = self.efficiency_score
+        efficiency_score = efficiency * 0.3
+    
+        # Goal achievement bonus
+        goals_achieved_count = len(self.goals_achieved) if self.goals_achieved else 0
+        goals_set_count = len(self.goals_set) if self.goals_set else 1
+        goal_score = (goals_achieved_count / goals_set_count) * 20
+    
+        # Focus integration
+        focus_contribution = float(self.focus_score) * 0.2
+    
+        productivity = pages_score + efficiency_score + goal_score + focus_contribution
+        return max(0.0, min(100.0, productivity))
+    
+    def update_focus_score(self, session_id: UUID) -> float:
+        """Calculate and update real-time focus score"""
+        session = self.db.query(StudySession).filter(StudySession.id == session_id).first()
+        if not session:
+            return 0.0
+    
+        # Get activity events for this session
+        activity_events = self.db.query(ActivityEvent).filter(
+            ActivityEvent.session_id == session_id
+        ).order_by(ActivityEvent.event_timestamp).all()
+    
+        # Get break records
+        break_records = self.db.query(SessionBreak).filter(
+            SessionBreak.session_id == session_id
+        ).all()
+    
+        # Calculate advanced focus score
+        new_focus_score = session.calculate_advanced_focus_score(activity_events, break_records)
+        new_productivity_score = session.calculate_productivity_score()
+    
+        # Update session
+        session.focus_score = new_focus_score
+        session.productivity_score = new_productivity_score
+        self.db.commit()
+    
+        logger.info(f"Focus score updated for session {session_id}: {new_focus_score:.1f}")
+        return new_focus_score
+    
+    def register_activity_event(self, session_id: UUID, event_type: str, event_data: dict = None) -> bool:
+        """Register an activity event for focus tracking"""
+        session = self.db.query(StudySession).filter(StudySession.id == session_id).first()
+        if not session or session.end_time:
+            return False
+    
+        # Create activity event
+        activity_event = ActivityEvent(
+            session_id=session_id,
+            event_type=event_type,
+            event_timestamp=datetime.utcnow(),
+            event_data=event_data or {},
+            focus_state="focused",  # Will be enhanced later
+            attention_score=1.0     # Will be calculated based on patterns
+        )
+    
+        self.db.add(activity_event)
+    
+        # Update real-time focus score
+        self.update_focus_score(session_id)
+    
+        self.db.commit()
+        return True
 
 class PageTime(Base):
     __tablename__ = "page_times"
@@ -161,7 +276,6 @@ class PageTime(Base):
 
     # Relationships
     session = relationship("StudySession", back_populates="page_times")
-    pdf = relationship("PDF")
 
     def __repr__(self):
         return f"<PageTime(session={self.session_id}, page={self.page_number}, duration={self.duration_seconds}s)>"
@@ -301,3 +415,81 @@ class TimeEstimate(Base):
             self.actual_minutes = actual_minutes
             error = abs(self.estimated_minutes - actual_minutes)
             self.accuracy_percentage = max(0, 100 - (error / self.estimated_minutes * 100))
+
+
+# Additional models for enhanced session tracking
+
+class SessionGoal(Base):
+    __tablename__ = "session_goals"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("study_sessions.id", ondelete="CASCADE"))
+    
+    # Goal details
+    goal_text = Column(String(500), nullable=False)
+    goal_type = Column(String(30))  # pages, time, comprehension, practice
+    target_value = Column(Float)
+    current_value = Column(Float, default=0.0)
+    
+    # Status
+    is_achieved = Column(Boolean, default=False)
+    achievement_time = Column(DateTime)
+    notes = Column(Text)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<SessionGoal(text='{self.goal_text[:30]}...', achieved={self.is_achieved})>"
+
+
+class SessionBreak(Base):
+    __tablename__ = "session_breaks"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("study_sessions.id", ondelete="CASCADE"))
+    
+    # Break timing
+    break_start = Column(DateTime, nullable=False)
+    break_end = Column(DateTime)
+    duration_minutes = Column(Integer)
+    
+    # Break details
+    break_type = Column(String(20))  # planned, interruption, pomodoro, fatigue
+    break_reason = Column(String(100))
+    activity_during_break = Column(String(100))
+    
+    # Recovery metrics
+    energy_before = Column(Integer)  # 1-5
+    energy_after = Column(Integer)   # 1-5
+    focus_recovery = Column(DECIMAL(3,2))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<SessionBreak(type='{self.break_type}', duration={self.duration_minutes}min)>"
+
+
+class ActivityEvent(Base):
+    __tablename__ = "activity_events"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("study_sessions.id", ondelete="CASCADE"))
+    page_time_id = Column(UUID(as_uuid=True), ForeignKey("page_times.id", ondelete="CASCADE"))
+    
+    # Event details
+    event_type = Column(String(30))  # click, scroll, zoom, highlight, note, bookmark
+    event_timestamp = Column(DateTime, default=datetime.utcnow)
+    page_number = Column(Integer)
+    
+    # Event metadata
+    event_data = Column(JSON, default={})  # coordinates, text content, etc.
+    duration_ms = Column(Integer)  # for sustained actions
+    
+    # Context
+    focus_state = Column(String(20))  # focused, distracted, idle
+    attention_score = Column(DECIMAL(3,2))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<ActivityEvent(type='{self.event_type}', page={self.page_number})>"

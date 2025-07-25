@@ -1,4 +1,4 @@
-# backend/main.py - Week 1 Simplified Version
+# backend/main.py - Week 2 Enhanced Version with Sessions
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="StudySprint 4.0 API",
-    description="Advanced Study Management System - Week 1 Foundation",
-    version="4.0.0-week1"
+    description="Advanced Study Management System - Week 2 with Sessions",
+    version="4.0.0-week2"
 )
 
 # CORS Configuration
@@ -32,13 +32,13 @@ app.add_middleware(
 async def health_check():
     return {
         "status": "healthy",
-        "version": "4.0.0-week1",
-        "stage": "Week 1 - Foundation Optimization Complete",
-        "modules_active": ["topics", "pdfs"],
-        "modules_planned": ["sessions", "notes", "goals", "analytics"]
+        "version": "4.0.0-week2",
+        "stage": "Week 2 - Sessions & Estimation Active",
+        "modules_active": ["topics", "pdfs", "sessions"],
+        "modules_planned": ["notes", "goals", "analytics"]
     }
 
-# Load only Stage 1 modules for Week 1
+# Load Stage 1 modules (Week 1)
 try:
     from modules.topics.routes import router as topics_router
     app.include_router(topics_router, prefix="/topics", tags=["topics"])
@@ -53,12 +53,16 @@ try:
 except ImportError as e:
     logger.error(f"❌ Failed to load pdfs: {e}")
 
-# Placeholder routes for future modules
-@app.get("/sessions/health")
-async def sessions_placeholder():
-    return {"status": "planned", "stage": "Stage 2", "week": "Week 2"}
+# Load Stage 2 modules (Week 2)
+try:
+    from modules.sessions.routes import router as sessions_router
+    app.include_router(sessions_router, prefix="/sessions", tags=["sessions"])
+    logger.info("✅ Sessions module loaded")
+except ImportError as e:
+    logger.error(f"❌ Failed to load sessions: {e}")
 
-@app.get("/notes/health") 
+# Placeholder routes for future modules
+@app.get("/notes/health")
 async def notes_placeholder():
     return {"status": "planned", "stage": "Stage 4", "week": "Week 4"}
 
